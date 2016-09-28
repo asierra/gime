@@ -1,0 +1,919 @@
+/*
+ * This file is part of GIME, a System to track storms interactively
+ * and to do basic meteorological image processing.
+ *
+ * GIME is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Copyright (c) 2002-2018  Alejandro Aguilar Sierra (asierra@unam.mx)
+ * Centro de Ciencias de la Atmosfera, UNAM         
+ */
+
+#include <QtGui>
+#include <QStringListModel>
+#include <QPrinter>
+
+#include "lines.h"
+#include "labels.h"
+#include "path.h"
+#include "gime_scene.h"
+#include "window.h"
+#include "graphwidget.h"
+#include "textdialog.h"
+
+
+static QFont text_font;
+
+
+Window::Window()
+{
+  createWorkarea();
+  setStretchFactor(0, 1);
+  setStretchFactor(1, 0);
+  setWindowTitle(tr("GIME"));
+  model = NULL;
+  pathmodel = NULL;
+  nuevaSesion();
+}
+
+
+Window::~Window()
+{	
+  qDeleteAll(pathlist);
+  delete model;
+  delete pathmodel;
+}
+
+
+bool Window::nuevaSesion()
+{
+  if (model!=NULL)
+    delete model;
+  if (pathmodel!=NULL)
+    delete pathmodel;
+  model = new TableModel(this);	
+  Path::model = model;
+  pathmodel = new QStringListModel(this);
+  listPaths->setModel(pathmodel);
+  listImages->setModel(model);
+  connect(listImages->selectionModel(), SIGNAL(currentChanged(QModelIndex,
+							      QModelIndex)),
+	  this, SLOT(imageSelected(const QModelIndex&)));	
+  filename = "sesion.gime";
+  qDeleteAll(pathlist);
+  pathlist.clear();
+  Labels::font = QFont();
+  Labels::texts.clear();
+  Labels::shown.clear();
+  Lines::width = 2;
+  drawpathAction->setChecked(false);
+  path_toolbar->setEnabled(false);
+  escena = new GimeScene(this);
+  view->clear();
+  view->setScene(escena);
+	
+  return true;
+}
+
+
+bool Window::extractDatesFromNames()
+{
+  int k;
+  bool ok;
+	
+  if (model->stringList().size()==0)
+    return false;
+		
+  QStringList list = model->stringList();
+		
+  QFileInfo pathInfo(list.at(0));
+  QString filename( pathInfo.fileName() );
+	
+  // Separa digitos de no digitos
+  QRegExp rx("(\\d+)");
+  QStringList ldigs = filename.split(QRegExp("\\D+"), QString::SkipEmptyParts);
+  QStringList ltext = filename.split(rx, QString::SkipEmptyParts);
+  
+  k = rx.indexIn(filename);
+  if (k==0)
+    ltext.insert(0, QString());
+  
+  QString label = QString::fromUtf8("Usar solamente las letras yMdhmj\nyyyy=año MM=mes dd=dia hh=hora mm=min jjj=dia anual");
+  
+  QStringList formats = TextDialog::getText(this, tr("Formato para extraer fecha"),
+					    label, ltext, ldigs, &ok);
+  if (!ok || formats.isEmpty())
+    return false;
+  
+  //qDebug() << formats << ", " << ltext << ", " << ldigs<<endl;
+
+  int p=0;
+  QList< QPair<int,int> > positions;
+  QString format;
+  QString format_sq;
+  QRegExp rxMask("([yMdhmj]+)");
+  int julian_pos = -1;
+  
+  // Construye format, todos los campos a ignorar se encierran entre ''
+  for (k=0; k < formats.size(); k++) {
+    p += ltext.at(k).size();
+    if (ltext.at(k).size() > 0) {
+      format.append(ltext.at(k));
+      format_sq.append("'"+ltext.at(k)+"'");
+    }
+    QString f = formats.at(k);
+    int i = rxMask.indexIn(f);
+    if (i > -1) { 
+      format.append(f);
+      if (f.contains("jjj")) {
+	int j = f.indexOf("jjj");
+	QString l = f.left(j);
+	QString r = f.right(f.size() - j - 3);
+	format_sq.append(l + "'jjj'" + r);
+	//	qDebug() << "l " << l << " r " << r << ", " << f.size() << ", " << j << endl; 
+	julian_pos = format.indexOf("jjj");
+      } else
+	  format_sq.append(rxMask.cap(1));
+    } else {
+      // Numero no marcado
+      format.append(f);
+      format_sq.append("'"+f+"'");       
+      qDebug() << f << endl;
+    } 
+    p += ldigs.at(k).size();
+  }
+  
+  if (format.size() < 4)
+    return false;
+  
+  QStringList fechas; 
+
+  for (int i = 0; i < list.size(); ++i) {		
+    QFileInfo pathInfo(list.at(i));
+    QString filename( pathInfo.completeBaseName() );		
+    QString f = filename;
+    QDateTime dt;
+    if (f.size() == format.size()) {
+      if (julian_pos > -1) {
+	int days = f.mid(julian_pos, 3).toInt() - 1;
+	QString format_aux = format_sq;
+	int julian_posx = format_aux.indexOf("jjj");
+	format_aux.replace(julian_posx, 3, f.mid(julian_pos, 3));
+	dt = QDateTime::fromString(f, format_aux);
+	dt = dt.addDays(days);
+	//qDebug() << "formatx " << format_aux << " days " << days << " fecha " << dt << endl;
+      } else
+	dt = QDateTime::fromString(f, format_sq);
+           
+      if ( dt.date().year() < 1960 && format.count("y") == 2 )
+	dt = dt.addYears(100);
+      
+      fechas << dt.toString("yyyy-MM-dd-hh:mm");
+    } else {
+      printf("Error en fecha %d\n", i);
+      return false; 
+    }
+  }
+  model->setDatesList(fechas);
+  return true;
+}
+
+
+QWidget *Window::createMenubar(QWidget * window)
+{
+  QMenuBar* menubar = new QMenuBar(window);
+  fileMenu = menubar->addMenu(tr("&File"));
+  editMenu = menubar->addMenu(tr("&Edit"));
+  QMenu *textMenu = menubar->addMenu(tr("&Text"));
+  windowMenu = menubar->addMenu(tr("&Window"));
+  helpMenu = menubar->addMenu(tr("&Help"));
+	
+  QAction *newAction = new QAction(QObject::trUtf8("&Nueva sesión"), this);	
+  fileMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(nuevaSesion()));
+  
+  loadAction = new QAction(QIcon(":/icons/document-open.png"), tr("&Carga imagen(es)"), this);	
+  fileMenu->addAction(loadAction);
+  connect(loadAction, SIGNAL(triggered()), this, SLOT(cargaImagen()));
+	
+  fileMenu->addSeparator();
+	
+  newAction = new QAction(QObject::trUtf8("C&arga sesión anónima"), this);	
+  fileMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(cargaSesion()));
+	
+  newAction = new QAction(QObject::trUtf8("C&arga sesión existente"), this);	
+  fileMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(cargaSesionComo()));
+	
+  fileMenu->addSeparator();
+  newAction = new QAction(QObject::trUtf8("&Guarda sesión anónima"), this);	
+  fileMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(guardaSesion()));
+  newAction = new QAction(QObject::trUtf8("&Guarda sesión como..."), this);	
+  fileMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(guardaSesionComo()));
+
+  fileMenu->addSeparator();
+  newAction = new QAction(QObject::trUtf8("Exporta a &JPEG"), this);
+  fileMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(renderToJPEG()));
+	
+  newAction = new QAction(QObject::trUtf8("&Exporta a EPS"), this);	
+  fileMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(exportPathAsEPS()));
+  
+//	newAction = new QAction(QObject::trUtf8("Exporta a SVG"), this);	
+//	fileMenu->addAction(newAction);
+//	connect(newAction, SIGNAL(triggered()), this, SLOT(exportPathAsSVG()));
+	
+  fileMenu->addSeparator();
+  newAction = new QAction(QObject::trUtf8("&Salir"), this);
+  newAction->setShortcut(QKeySequence(QKeySequence::Quit));
+  fileMenu->addAction(newAction); 
+  connect(newAction, SIGNAL(triggered()), qApp, SLOT(quit()));
+
+  // Edit menú
+  newAction = new QAction(QObject::trUtf8("Extrae &fechas de nombre"), this);	
+  editMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(extractDatesFromNames()));
+
+  newAction = new QAction(QObject::trUtf8("Cambia &tamaño o tipo de letra"), this);	
+  editMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(cambiaLetra()));
+  
+  newAction = new QAction(QObject::trUtf8("Cambia &ancho de línea"), this);	
+  editMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(cambiaAnchoLinea()));
+  
+  // Text menu
+  newAction = new QAction(QObject::trUtf8("Activa &etiquetas"), this);	
+  textMenu->addAction(newAction);
+  //connect(newAction, SIGNAL(triggered()), this, SLOT(help()));
+  
+  newAction = new QAction(QObject::trUtf8("&Agrega texto"), this);	
+  textMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(agregaTexto()));
+
+  // Help menu
+  newAction = new QAction(QObject::trUtf8("A&yuda"), this);	
+  helpMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(help()));
+  
+  newAction = new QAction(QObject::trUtf8("&Acerca"), this);	
+  helpMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(acerca()));
+
+  return menubar;
+}
+
+
+QWidget * Window::createWorkarea()
+{	
+  view = new GraphWidget(this);
+	
+  QSplitter *imaSplitter = new QSplitter(Qt::Vertical, this);
+  //imaSplitter->setMaximumWidth(600);
+  createMenubar(imaSplitter);
+
+  QToolBar *toolbar = new QToolBar("image toolbar", this);
+	
+  toolbar->addAction(loadAction);
+	
+  QAction *action = new QAction(QIcon(":/icons/go-first.png"), "Primera imagen", this);
+  connect(action, SIGNAL(triggered()), this, SLOT(imageFirst()));
+  toolbar->addAction(action);
+	
+  action = new QAction(QIcon(":/icons/go-previous.png"), "Imagen previa", this);
+  connect(action, SIGNAL(triggered()), this, SLOT(imagePrev()));
+  toolbar->addAction(action);
+	
+  action = new QAction(QIcon(":/icons/go-next.png"), tr("Imagen siguiente"), this);
+  connect(action, SIGNAL(triggered()), this, SLOT(imageNext()));
+  toolbar->addAction(action);
+  
+  action = new QAction(QIcon(":/icons/go-last.png"), "Ultima imagen", this);
+  connect(action, SIGNAL(triggered()), this, SLOT(imageLast()));
+  toolbar->addAction(action);
+	
+  action = new QAction(QIcon(":/icons/folder-new.png"), "Nueva sesión", this);
+  connect(action, SIGNAL(triggered()), this, SLOT(borraListaImagenes()));
+  toolbar->addAction(action);
+	
+  listImages = new QTableView(this);
+  listImages->setAlternatingRowColors(true);
+  listImages->setSelectionBehavior(QAbstractItemView::SelectRows);
+  listImages->setSelectionMode(QAbstractItemView::SingleSelection);
+  listImages->setEditTriggers(QAbstractItemView::NoEditTriggers);
+  listImages->setTextElideMode(Qt::ElideLeft);  
+  listImages->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);	
+	
+  QSplitter *dateSplitter = new QSplitter(this);
+  datetime = new QDateTimeEdit(QDateTime::currentDateTime(), this);
+  datetime->setDisplayFormat("yyyy-MM-dd-hh:mm");
+  dateSplitter->addWidget(datetime);
+	
+  QPushButton *button = new QPushButton("Cambia Fecha", this);
+  connect(button, SIGNAL(pressed()), this, SLOT(cambiaFecha()));
+  dateSplitter->addWidget(button);
+	
+  imaSplitter->addWidget(new QLabel("Imagenes", this));
+  imaSplitter->addWidget(toolbar);
+  imaSplitter->addWidget(listImages);
+  imaSplitter->addWidget(dateSplitter);
+  
+  path_toolbar = new QToolBar("path toolbar", this);
+  
+  action = new QAction(QIcon(":/icons/list-add.png"), "Nueva trayectoria", this);
+  connect(action, SIGNAL(triggered()), this, SLOT(addPath()));
+  path_toolbar->addAction(action);
+	
+  drawpathAction = new QAction(QIcon(":/icons/airport2.png"), "Ver trayectorias", this);
+  drawpathAction->setCheckable(true);
+  drawpathAction->setChecked(true);
+  connect(drawpathAction, SIGNAL(triggered()), this, SLOT(drawPath()));
+  path_toolbar->addAction(drawpathAction);
+	
+  drawArrowsAction = new QAction(QIcon(":/icons/go-up.png"), "Dibujar flecha", this);
+  drawArrowsAction->setCheckable(true);
+  connect(drawArrowsAction, SIGNAL(triggered()), this, SLOT(drawArrows()));
+  path_toolbar->addAction(drawArrowsAction);
+	
+  action = new QAction(QIcon(":/icons/list-remove.png"), "Eliminar trayectoria", this);
+  connect(action, SIGNAL(triggered()), this, SLOT(removePath()));
+  path_toolbar->addAction(action);
+
+  drawHourIconsAction = new QAction(QIcon(":/icons/clock.png"), "Dibujar iconos horarios", this);
+  drawHourIconsAction->setCheckable(true);
+  connect(drawHourIconsAction, SIGNAL(triggered()), this, SLOT(drawHourIcons()));
+  path_toolbar->addAction(drawHourIconsAction);
+	
+  QPixmap pathcolorpixmap(32,32);
+  pathcolorpixmap.fill(Path::defaultColor);
+  pathColorAction = new QAction(QIcon(pathcolorpixmap), "Cambiar color de trayectoria", this);
+  connect(pathColorAction, SIGNAL(triggered()), this, SLOT(pathColor()));
+  path_toolbar->addAction(pathColorAction);
+	
+  drawLabelsAction = new QAction(QIcon(":/icons/format-text-bold.png"), "Ver etiquetas", this);
+  drawLabelsAction->setCheckable(true);
+  connect(drawLabelsAction, SIGNAL(triggered()), this, SLOT(drawLabels()));
+  path_toolbar->addAction(drawLabelsAction);
+	
+  spinLabels = new QSpinBox(this);
+  spinLabels->setRange(0, 100);
+  spinLabels->setValue(1);
+  connect(spinLabels, SIGNAL(valueChanged(int)), this, SLOT(spaceLabels(int)));
+  path_toolbar->addWidget(spinLabels);
+  
+  action_year = new QAction("Y", this);
+  action_year->setCheckable(true);
+  connect(action_year, SIGNAL(triggered()), this, SLOT(labelManualFormat()));
+  action_mounth = new QAction("M", this);
+  action_mounth->setCheckable(true);
+  connect(action_mounth, SIGNAL(triggered()), this, SLOT(labelManualFormat()));
+  action_day = new QAction("D", this);
+  action_day->setCheckable(true);
+  connect(action_day, SIGNAL(triggered()), this, SLOT(labelManualFormat()));
+  action_hour = new QAction("h", this);
+  action_hour->setCheckable(true);
+  connect(action_hour, SIGNAL(triggered()), this, SLOT(labelManualFormat()));
+  action_min = new QAction("m", this);
+  action_min->setCheckable(true);
+  connect(action_min, SIGNAL(triggered()), this, SLOT(labelManualFormat()));
+  path_toolbar->addAction(action_year);	
+  path_toolbar->addAction(action_mounth);	
+  path_toolbar->addAction(action_day);	
+  path_toolbar->addAction(action_hour);		
+  path_toolbar->addAction(action_min);		
+  
+  path_toolbar->setEnabled(false);
+	
+  listPaths = new QListView(this);
+  listPaths->setAlternatingRowColors(true);
+  connect(listPaths, SIGNAL(clicked(QModelIndex)),
+	  this, SLOT(pathClicked(const QModelIndex&)));
+  
+  imaSplitter->addWidget(new QLabel("Trayectorias"));
+  imaSplitter->addWidget(path_toolbar);
+  imaSplitter->addWidget(listPaths);
+  //imaSplitter->setStretchFactor(2, 1);
+  
+  addWidget(view);
+  addWidget(imaSplitter);
+  
+  return this;
+ }
+
+
+void Window::cargaImagen()
+{
+	QFileDialog dialog(this);
+	dialog.setFileMode(QFileDialog::ExistingFiles);
+	dialog.setNameFilter(tr("Images (*.png *.jpg *.tif *gif)")); 
+	if (dialog.exec()) {
+		QStringList fileNames;
+		fileNames = dialog.selectedFiles();
+		QStringList list = model->stringList();
+		int idx = list.size();
+		list << fileNames;
+		model->setStringList(list);
+		path_toolbar->setEnabled(true);
+		selImage(idx);
+	}
+}
+
+		
+void Window::borraListaImagenes()
+{
+	if (model->rowCount() > 0) {
+		QMessageBox msgBox;
+		msgBox.setText(QObject::trUtf8("¿Desea eliminar la sesión?"));
+		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msgBox.setDefaultButton(QMessageBox::No);
+		int ret = msgBox.exec();
+		if (ret==QMessageBox::Yes) 
+			nuevaSesion();
+	}
+}	
+
+
+void Window::acerca()
+{
+  QMessageBox::about(this, trUtf8("GIME"),
+		     trUtf8("Sistema de rastreo de tormentas y análisis\nde imágenes meteorológicas.\nAutor: Alejandro Aguilar Sierra\nCentro de Ciencias de la Atmósfera, UNAM"));
+}
+
+#include "help.h"
+
+void Window::help()
+{
+  QWidget *helpwindow = new QWidget;
+  helpwindow->setAttribute(Qt::WA_DeleteOnClose);
+  
+  QTextEdit* help=new QTextEdit();
+  help->setReadOnly(true);
+  help->append(trUtf8(help_string));
+  help->setMinimumWidth(600);
+  help->setMinimumHeight(550);
+  
+  QPushButton *closeButton = new QPushButton(tr("&Close"));
+  connect(closeButton, SIGNAL(clicked()), helpwindow, SLOT(close()));
+  
+  QVBoxLayout *layout = new QVBoxLayout;
+  layout->addWidget(help);
+  layout->addWidget(closeButton);
+  
+  helpwindow->setLayout(layout);
+  helpwindow->setWindowTitle(tr("GIME -  Ayuda"));
+  helpwindow->show();
+}
+
+void Window::imageSelected(const QModelIndex &index) {
+	int i = index.row();
+	Path::image_idx = i;
+	escena->updatePositions();
+   	view->setImage(model->stringList().at(i));	
+//	if (index.column() > 0) 
+		datetime->setDateTime(model->dateTimeAt(i));
+}
+
+
+void Window::cambiaFecha()
+{
+	QModelIndex index = listImages->currentIndex();
+	if (Path::image_idx >= 0 && index.column()==1) 
+		model->setData(index, datetime->dateTime().toString("yyyy-MM-dd-hh:mm"), Qt::EditRole);
+}
+
+
+bool Window::asignaFecha(const QModelIndex &index) {
+	if (index.column() > 0) {
+		model->setData(index, datetime->dateTime().toString("yyyy-MM-dd-hh:mm"));
+		return true;
+	}
+	return false;
+}
+
+
+void Window::pathClicked(const QModelIndex &index) {
+	int i = index.row();	
+
+	if (Path::selected == pathlist.at(i))
+		Path::selected = NULL;
+	else
+		Path::selected = pathlist.at(i);
+	view->selectPath();
+}
+
+
+void Window::selImage(int i)
+{
+	if (i >= 0 && i < model->rowCount()) {
+		QModelIndex index = model->index(i, 0);
+		listImages->setCurrentIndex(index);
+		imageSelected(index);
+	}
+}
+
+
+void Window::imageFirst()
+{
+	selImage(0);
+}
+
+
+void Window::imagePrev()
+{
+	QModelIndex index = listImages->currentIndex();
+	int i = index.row();
+	selImage(i-1);
+}
+
+
+void Window::imageNext()
+{
+	QModelIndex index = listImages->currentIndex();
+	int i = index.row();
+	selImage(i+1);
+}
+
+void Window::imageLast()
+{
+	selImage(model->rowCount()-1);
+}
+
+
+void Window::addPath()
+{
+	QStringList list = pathmodel->stringList();
+	int id = list.size();
+	Path *path = new Path(model->stringList().size());
+	path->setName(QString("%1").arg(id+1,3,10,QChar('0')));
+	pathlist << path;
+	escena->addPath(path);
+	list << path->getName();
+	pathmodel->setStringList(list);
+	printf("addpath %d [%d]\n", id, pathmodel->stringList().size());
+}
+
+
+void Window::removePath()
+{
+	if (Path::selected != NULL) {
+		QMessageBox msgBox;
+		msgBox.setText(QObject::trUtf8("¿Desea eliminar la trayectoria seleccionada?"));
+		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msgBox.setDefaultButton(QMessageBox::No);
+		int ret = msgBox.exec();
+		switch (ret) {
+			case QMessageBox::No:
+				printf("No\n");
+			break;
+			case QMessageBox::Yes:
+				escena->removePath();
+				pathlist.removeOne(Path::selected);
+				QModelIndex index = listPaths->currentIndex();
+				int i = index.row();
+				pathmodel->removeRows(i,1);
+				delete Path::selected;
+			break;
+		}
+		Path::selected = NULL;
+	}
+}
+
+
+void Window::pathColor()
+{
+	QColor color = QColorDialog::getColor(Path::defaultColor);
+	if (Path::selected!=NULL)
+		Path::selected->color = color;
+	else
+		Path::defaultColor = color;
+		
+	QPixmap pathcolorpixmap(32,32);
+	pathcolorpixmap.fill(Path::defaultColor);
+	pathColorAction->setIcon(QIcon(pathcolorpixmap));
+}
+
+
+void Window::drawPath()
+{
+  if (drawpathAction->isChecked())
+    escena->showPaths(true);
+  else
+    escena->showPaths(false);
+	
+  QWidget * viewport = view->viewport();
+  viewport->update();
+}
+
+
+void Window::drawLabels()
+{
+  if (drawLabelsAction->isChecked()) {
+    if (Labels::texts.isEmpty()) {
+      Labels::texts = model->dateStringList(model->dateSuggestedFormat(Labels::space));
+      if (Labels::shown.isEmpty()) {
+	for (int i=0; i < Labels::texts.size(); i++)
+	  Labels::shown.append(true);
+      }
+      escena->updateTextLabels();
+    }
+    escena->showLabels(true);
+  } else
+    escena->showLabels(false);
+
+  QWidget * viewport = view->viewport();
+  viewport->update();
+}
+
+
+void Window::toggleLabel()
+{
+  if (drawLabelsAction->isChecked()) {
+    Labels::shown[Path::image_idx] =  !Labels::shown[Path::image_idx];
+    printf("togleando %d\n", Labels::shown[Path::image_idx]);
+    
+    escena->updateShownLabels();
+    QWidget * viewport = view->viewport();
+    viewport->update();
+  } 
+}
+
+
+void Window::spaceLabels(int space)
+{
+  if (drawLabelsAction->isChecked()) {
+    for (int i=0; i < Labels::texts.size(); i++) {
+      bool is_shown = ((space==0 && i==0) || (space > 0 && (i % space==0)));
+      Labels::shown[i] = is_shown;
+    }
+    escena->updateShownLabels();
+    QWidget * viewport = view->viewport();
+    viewport->update();
+  }
+}
+
+
+void Window::labelManualFormat()
+{
+  QString format;
+
+  if (action_year->isChecked())
+    format += "yyyy";
+  if (action_mounth->isChecked())
+    format += "MM";
+  if (action_day->isChecked())
+    format += "dd";
+  if (action_hour->isChecked())
+    format += "hh";
+  if (action_min->isChecked())
+    format += "mm";
+
+  if (format == "dd") {
+    format = "d";
+    int count = model->imagesPerDay();
+    spinLabels->setSingleStep(count);
+    spinLabels->setValue(0);
+    qDebug() <<  "Images per day " << count << endl;
+  } else 
+    spinLabels->setSingleStep(1);
+  
+  Labels::texts = model->dateStringList(format);
+  escena->updateTextLabels();
+  printf("Formato manual %s\n", format.toStdString().c_str());		
+  
+  QWidget * viewport = view->viewport();
+  viewport->update();
+}
+
+
+void Window::drawArrows()
+{
+  if (drawArrowsAction->isChecked())
+    Lines::show_arrows = true;
+  else
+    Lines::show_arrows = false;
+  
+  QWidget * viewport = view->viewport();
+  viewport->update();
+}
+
+void Window::drawHourIcons()
+{
+  if (drawHourIconsAction->isChecked())
+    Lines::show_icons = true;
+  else
+    Lines::show_icons = false;
+  
+  QWidget * viewport = view->viewport();
+  viewport->update();
+}
+
+
+bool Window::exportPathAsEPS()
+{
+	QString epsfile = QFileDialog::getSaveFileName(0, tr("Exportar EPS"),
+        "", tr("EPS files (*.eps)"));
+	
+	QFile file(epsfile);
+	if (!file.open(QIODevice::WriteOnly))
+		return false;
+
+	QTextStream out(&file);
+
+	QString eps = "%!PS-Adobe-3.0 EPSF-3.0\n"
+	"%%Pages 0\n"
+	"%%BoundingBox: 0 0 ";
+	
+	eps += QString("%1 %2\n").arg(view->scene()->width()).arg(view->scene()->height());
+	eps += "newpath\n";
+	foreach (Path *path, pathlist)
+		eps += path->toEPS();
+	eps += "stroke\n";
+	out << eps;
+	
+	return true;
+}
+
+
+bool Window::renderToJPEG()
+{
+	if (!view->fondo.isNull()) {
+		QImage img(view->fondo.size(), QImage::Format_ARGB32_Premultiplied);
+		QPainter painter(&img);
+		painter.setRenderHint(QPainter::Antialiasing);
+		painter.drawImage(view->fondo.rect(), view->fondo);
+		QColor color(Qt::white);
+		color.setAlphaF(0.25);
+		painter.fillRect(view->fondo.rect(), QBrush(color));
+		//painter.setFont(escena->font());
+		escena->render(&painter);
+		painter.end();
+		img.save("gime.jpg", "JPG");
+		return true;
+	}
+	return false;
+}
+
+
+bool Window::guardaSesionComo()
+{
+	filename = QFileDialog::getSaveFileName(0,
+	     QObject::trUtf8("Guarda sesión"), "", tr("GIME Sessions (*.gime)"));
+	return guardaSesion();
+}
+
+
+bool Window::guardaSesion()
+{    
+	if (filename=="sesion.gime" && QMessageBox::warning(this, tr("Guardar sesion"),
+		                                tr("¿Desea sobreescribir la sesion anonima?"),
+		                                QMessageBox::Save | QMessageBox::Cancel,
+		                                QMessageBox::Save)==QMessageBox::Cancel)
+		return false;
+	
+	QFile file(filename);
+	if (!file.open(QIODevice::WriteOnly))
+		return false;
+
+	QDataStream outStream(&file);
+	outStream.setVersion(QDataStream::Qt_4_7);
+	outStream << model->fullStringList();
+	outStream << pathlist.size();
+	foreach (Path *path, pathlist) {
+		outStream << path;
+	}
+	
+	printf("Guardo %d [%d]\n", pathlist.size(), pathmodel->stringList().size());
+	
+	return true;
+}
+
+
+bool Window::cargaSesionComo()
+{
+	filename = QFileDialog::getOpenFileName(this,
+	     QObject::trUtf8("Carga sesión"), "sesion.gime", tr("GIME Sessions (*.gime)"));
+	
+	return cargaSesion();;
+}
+
+
+bool Window::cargaSesion()
+{
+	QFile file(filename);
+	if (!file.open(QIODevice::ReadOnly))
+		return false;
+
+	QDataStream inStream(&file);
+	inStream.setVersion(QDataStream::Qt_4_7);
+
+	QStringList list;
+	inStream >> list;
+//	model->setStringList(list);
+	model->setFullStringList(list);
+	
+	int psize;
+	inStream >> psize;
+	for (int i=0; i < psize; i++) {
+		Path *path;
+		inStream >> path;
+		pathlist.append(path);
+	}
+	
+	QStringList plist;
+	foreach (Path *path, pathlist) {
+		escena->addPath(path);
+		plist << path->getName();
+
+	}
+	pathmodel->setStringList(plist);
+		
+	path_toolbar->setEnabled(true);
+	selImage(0);
+	
+	printf("strings %d [%d]\n", list.size(), model->stringList().size());
+	printf("paths %d [%d]\n", pathlist.size(), pathmodel->stringList().size());
+	return true;
+}
+
+
+void Window::keyPressEvent(QKeyEvent *event)
+{
+  printf("Tecla oprimida \n");
+  
+  switch (event->key()) {
+  case Qt::Key_F:
+    toggleLabel();
+    break;
+  case Qt::Key_Home:
+    imageFirst();
+    break;
+  case Qt::Key_End:
+    imageLast();
+  default:
+    QSplitter::keyPressEvent(event);
+  }
+}
+
+void Window::cambiaLetra()
+{
+  bool ok, text_ok = false;
+  QFont font = Labels::font;
+
+  if (!escena->selectedItems().empty()) {
+    QGraphicsItem *item = escena->selectedItems()[0];
+    if (item->parentItem() == 0) {
+      font = text_font;
+      text_ok = true;
+    }
+  }
+      
+  font = QFontDialog::getFont(&ok,font, this);
+  
+  if (ok) {
+    if (text_ok) {
+      text_font = font;
+      QGraphicsSimpleTextItem *item = (QGraphicsSimpleTextItem*)escena->selectedItems()[0];
+      item->setFont(text_font);
+    } else {
+      Labels::font = font;
+      escena->updateFontLabels();
+    }
+    
+    view->update();
+    printf("Font size %d familia %s\n", font.pointSize(), font.family().toStdString().c_str());
+    //view->setFont(font);
+    printf("Font cambiada ");
+    // the user clicked OK and font is set to the font the user selected
+  } 
+}
+
+
+void Window::cambiaAnchoLinea()
+{
+  bool ok;
+  int i = QInputDialog::getInt(this, tr("Ancho de línea"),
+                                 tr("Ancho:"), Lines::width, 0, 100, 1, &ok);
+  if (ok) 
+    Lines::width = i;
+}
+
+
+void Window::agregaTexto() {
+  bool ok;
+  QString text = QInputDialog::getText(this, tr("Texto sobre la imagen"),
+				       tr("Texto:"), QLineEdit::Normal, "", &ok);
+  if (ok && !text.isEmpty()) {
+    QGraphicsSimpleTextItem *item = new QGraphicsSimpleTextItem();
+    //    item->setFont(font);
+    item->setFlag(QGraphicsItem::ItemIsSelectable);
+    item->setFlag(QGraphicsItem::ItemIsMovable);
+    item->setText(text);
+    escena->addItem(item);
+  }
+}

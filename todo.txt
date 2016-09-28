@@ -1,0 +1,71 @@
+Por hacer:
+
+- Salvar y actualizar sesiones e incluir cambios a uso de etiquetas extra
+y acomodo de las mismas.
+- Opción de íconos de hora, 0, 12, 6, 18
+- Checar color de trayectoria
+- Borrar nodos finales
+- Exportar animación en APNG con trayectorias
+
+Diálogo de preferencias
+- Poder elegir 3 tamaños de fecha en nodos y formato
+- Elegir tamaño de flecha
+- Espacear las fechas (1,2,3)
+
+Diálogo de georeferenciación
+- Georeferenciación
+- Que el usuario pueda dar las esquinas y proyección para obtener coordenadas
+- Sobreponer mapa
+- https://github.com/OSGeo/proj.4/wiki/ProjAPI
+- Incluir mapa en imagen exportada en EPS y SVG con paralelos y longitudes, y trayectorias en color
+
+- Componentes GIS para usar coordenadas reales 
+
+- exportar  paths a shapeline para visualizarse en un GIS
+
+- Gestión eficiente de paths en view
+
+- Ocultar y desocultar nodos y paths
+
+- Grey out fondo boton y edo en view
+
+- Que cada trayectoria pueda tener un color específico.
+
+- columnas
+
+- Fecha de cada nodo registrado por trayectoria (fecha asociada a imagen). Con base en eso poner fechas inicial y final en la tabla en la que aparece la trayectoria.
+
+- Poner flecha y cola para distinguir inicio y final de trayectoria.
+
+- Poder cambiar color de trayectorias.
+
+- Puede agregar imágenes.
+
+
+Esto es para trackear sistemas nubososo en imagenes o trackear centros de alta o minima presion en graficos generadas por el Ncarg. Supongamos que tenemos n imagenes J0,..,Jn. Puede ser que en la primera imagen existan k={1,2,..,K} sistemas nuboso de interes por trackear. En cada imagen con
+el raton identificamos  puntos Pk0,Pk1,..,Pkj, donde j puede ser menor o igual a n, en eso el GIME nos da Pk0(lat,lon),..,Pkj(lat,lon) de tal manera que despues tenemos los varios conjuntos de puntos conjunto de puntos {P10,..,P1n}, {P20,..,P2n},..,{PK0,..,PKj}  que podemos gravar en un File y despues desplegar las trayectoris de los varios conjuntos de puntos marcados en un mapa, hay que saber cuando iniciar y terminar un conjunto {Pk0,..,Pkn}
+Claro esto se podria hacer por proc. digital de imagenes pero eso lleva mas tiempo por lo pronto un interactivo.
+
+
+
+Hecho:
+
+- Extraer fechas más interactivo, que el usuario defina con base en el nombre de la imagen:
+  Poner nombre de la imagen y dejar que el usuario encime su definición
+- etiquetar día y hora DDHH en cada punto de trayectoria 
+- Extraer fecha y hora de nombre de la imagen
+- Cambiar color de cada trayectoria, asignarlo por orden de aparición y que uno pueda cambiarlo
+- Encimar la última imagen en el export JPG
+
+
+- Version linux instalada correctamente
+- Mejorar el método de asignación id de paths, porque puede fallar al borrar paths
+- Eliminar trayectoria
+- Seleccionar paths
+- Leer colección de imágenes
+- Usar background no brush, consultar ejemplos
+- conectar toolbars
+- Asociar a cada imagen un conjunto de nodos
+- salvar esa información 
+- Menús con acentos
+

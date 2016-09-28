@@ -1,0 +1,10 @@
+#!/bin/sh
+
+echo '<!DOCTYPE RCC><RCC version="1.0">'
+echo '<qresource>'
+for i in `ls icons`
+do
+	echo "<file>icons/"$i"</file>"
+done
+echo '</qresource>'
+echo '</RCC>'
