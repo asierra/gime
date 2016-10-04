@@ -14,6 +14,7 @@
 #include <QtGui>
 #include <QStringListModel>
 #include <QPrinter>
+#include <QTabWidget>
 
 #include "lines.h"
 #include "labels.h"
@@ -22,6 +23,7 @@
 #include "window.h"
 #include "graphwidget.h"
 #include "textdialog.h"
+#include "coordtab.h"
 
 
 static QFont text_font;
@@ -73,7 +75,8 @@ bool Window::nuevaSesion()
   escena = new GimeScene(this);
   view->clear();
   view->setScene(escena);
-	
+  coordtab->setScene(escena);
+
   return true;
 }
 
@@ -323,6 +326,7 @@ QWidget * Window::createWorkarea()
   imaSplitter->addWidget(toolbar);
   imaSplitter->addWidget(listImages);
   imaSplitter->addWidget(dateSplitter);
+
   
   path_toolbar = new QToolBar("path toolbar", this);
   
@@ -394,10 +398,17 @@ QWidget * Window::createWorkarea()
   listPaths->setAlternatingRowColors(true);
   connect(listPaths, SIGNAL(clicked(QModelIndex)),
 	  this, SLOT(pathClicked(const QModelIndex&)));
+  QTabWidget *lowTab = new QTabWidget(imaSplitter);
+  QSplitter *pathSplitter = new QSplitter(Qt::Vertical);
+  //  pathSplitter->addWidget(new QLabel("Trayectorias"));
+  pathSplitter->addWidget(path_toolbar);
+  pathSplitter->addWidget(listPaths);
+  lowTab->addTab(pathSplitter, "Trayectorias");
+
+  coordtab = new CoordTab(this);
+  lowTab->addTab(coordtab, "Coordenadas");
   
-  imaSplitter->addWidget(new QLabel("Trayectorias"));
-  imaSplitter->addWidget(path_toolbar);
-  imaSplitter->addWidget(listPaths);
+  imaSplitter->addWidget(lowTab);
   //imaSplitter->setStretchFactor(2, 1);
   
   addWidget(view);

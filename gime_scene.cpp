@@ -15,6 +15,7 @@
 #include "lines.h"
 #include "labels.h"
 #include "path.h"
+#include "marker.h"
 #include "gime_scene.h"
 
 
@@ -94,6 +95,7 @@ void GimeScene::updateTextLabels()
   }
 }
 
+
 void GimeScene::updateShownLabels()
 {
   if (!labellist.isEmpty()) {
@@ -152,7 +154,6 @@ void GimeScene::setPathPosition(QPointF p)
 }
 
 
-
 void GimeScene::deletePosition()
 {	
   Path *path = Path::selected;
@@ -163,6 +164,24 @@ void GimeScene::deletePosition()
     //		update();
   }
 }
+
+
+void GimeScene::addMarker(Marker *item)
+{
+  addItem(item);
+  markerlist << item;
+}
+
+
+void GimeScene::removeMarker()
+{/*
+  removeItem(item);
+  nodelist.removeAt(idx);
+  itemlist.removeAt(idx);
+  delete node;
+  delete item;*/
+}
+
 
 void GimeScene::showPaths(bool unhide)
 {
@@ -179,6 +198,19 @@ void GimeScene::showLabels(bool unhide)
   if (!labellist.isEmpty()) {
     //    printf("Mostrando labels\n");
     foreach (QGraphicsItem* item, labellist) {      
+      if (unhide) 
+	item->show();
+      else
+	item->hide();
+    }
+  }
+}
+
+
+void GimeScene::showMarkers(bool unhide)
+{
+  if (!markerlist.isEmpty()) {
+    foreach (QGraphicsItem* item, markerlist) {      
       if (unhide) 
 	item->show();
       else

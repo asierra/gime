@@ -18,6 +18,7 @@
 
 class Node;
 class Path;
+class Marker;
 
 
 class GimeScene : public QGraphicsScene
@@ -31,6 +32,9 @@ public:
 	void removePath();
 	void showPaths(bool show=true);
 	void showLabels(bool show=true);
+	void addMarker(Marker *item);
+	void removeMarker();
+	void showMarkers(bool show=true);
 	void updateTextLabels();
 	void updateShownLabels();
 	void updateFontLabels();
@@ -43,6 +47,7 @@ private:
 	QList<Node*> nodelist;
 	QList<QGraphicsItem*> itemlist;
 	QList<QGraphicsItem*> labellist;
+	QList<QGraphicsItem*> markerlist;
 	QGraphicsItemGroup *pathgroup;
 };
 

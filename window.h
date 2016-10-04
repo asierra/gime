@@ -30,7 +30,7 @@ class QToolBar;
 class QDateTimeEdit;
 class GimeScene;
 class QSpinBox;
-
+class CoordTab;
 
 class Window : public QSplitter {
   Q_OBJECT
@@ -109,5 +109,6 @@ class Window : public QSplitter {
     QString filename;
     QDateTimeEdit *datetime;
     QSpinBox *spinLabels;
+    CoordTab *coordtab;
 };
 #endif
