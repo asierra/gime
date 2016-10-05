@@ -15,7 +15,8 @@
 #include "coordtab.h"
 #include "marker.h"
 
-Marker *marker;
+Georefencia georeferencia;
+
 
 CoordTab::CoordTab(QWidget * parent): QSplitter(parent)
 {
@@ -57,6 +58,10 @@ void CoordTab::createWorkarea()
   
   action = new QAction(QIcon(":/icons/list-remove.png"), "Elimina coordenada", this);
   connect(action, SIGNAL(triggered()), this, SLOT(removeCoord()));
+  toolbar->addAction(action);
+  
+  action = new QAction(QIcon(":/icons/mapa.png"), "Calcula georreferenciación", this);
+  connect(action, SIGNAL(triggered()), this, SLOT(computeGeoreferencing()));
   toolbar->addAction(action);  
 
   listcoords = new QTableView(this);
@@ -79,10 +84,10 @@ void CoordTab::toogleVisible()
 
 void CoordTab::addCoord()
 {
-    marker = new Marker(ncoords++);
-    marker->setModel(model);
-    if (scene != NULL)
-      scene->addMarker(marker);
+  Marker *marker = new Marker(ncoords++);
+  marker->setModel(model);
+  if (scene != NULL)
+    scene->addMarker(marker);
 }
 
 
@@ -91,3 +96,32 @@ void CoordTab::removeCoord()
   qDebug() << "Por implementar" << endl;
   --ncoords;
 }
+
+
+void CoordTab::computeGeoreferencing()
+{
+  qDebug() << "Computando..." << endl;
+
+  georeferencia.x1 = model->item(0, 0)->data().toFloat();
+  georeferencia.y1 = model->item(1, 0)->data().toFloat();
+  georeferencia.lo1 = model->item(2, 0)->data().toFloat();
+  georeferencia.la1 = model->item(3, 0)->data().toFloat();
+  georeferencia.x2 = model->item(0, 1)->data().toFloat();
+  georeferencia.y2 = model->item(1, 1)->data().toFloat();
+  georeferencia.lo2 = model->item(2, 1)->data().toFloat();
+  georeferencia.la2 = model->item(3, 1)->data().toFloat();
+}
+
+
+Georefencia::Georefencia()
+{
+  x1 = y1 = x2 = y2 = 0.0;
+}
+
+
+void Georefencia::compute(float x, float y, float &lo, float &la)
+{
+  lo = lo1 + (x1 - x) * (lo2 - lo1) / (x1 - x2);
+  la = la1 + (y1 - y) * (la2 - la1) / (y1 - y2);
+}
+

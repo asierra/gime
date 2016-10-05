@@ -38,19 +38,8 @@ class CoordTab : public QSplitter {
     void addCoord();
     void removeCoord();
     void toogleVisible();
+    void computeGeoreferencing();
     
-private slots:
-  
-  void clickedSlot(QModelIndex index)
-  {
-    QMessageBox::information(NULL,"QTableView Item Clicked",index.data().toString());
-  };
-  
-   void doubleClickedSlot(QModelIndex index)
-  {
-    QMessageBox::information(NULL,"QTableView Item Double Clicked",index.data().toString());
-  }; 
-  
  private:
     void createWorkarea();
     QStandardItemModel *model;
@@ -63,5 +52,13 @@ private slots:
 };
 
 
+class Georefencia {
+ public:
+  Georefencia();
+  void compute(float x, float y, float &lo, float &la);
+  
+  float x1, y1, x2, y2;
+  float lo1, la1, lo2, la2;
+};
 
 #endif
