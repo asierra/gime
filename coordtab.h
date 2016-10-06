@@ -16,11 +16,13 @@
 
 #include <QtGui>
 #include <QSplitter>
-#include <QTableView>
+#include <QTableWidget>
 #include <QToolBar>
 #include <QAction>
-#include <QStandardItemModel>
 #include "gime_scene.h"
+
+
+class Georefencia;
 
 
 class CoordTab : public QSplitter {
@@ -30,9 +32,14 @@ class CoordTab : public QSplitter {
   CoordTab(QWidget * parent = 0);
   ~CoordTab();
   void setScene(GimeScene *scene) { this->scene = scene; }
+  void feedFromGeoreferencing();
+  float getValue(int row, int col) {    
+    QModelIndex index = listcoords->model()->index(row, col, QModelIndex());
+    return listcoords->model()->data(index).toFloat();
+  }
   
  protected:
-  QTableView *listcoords;
+  QTableWidget *listcoords;
 		    
   public slots:
     void addCoord();
@@ -42,7 +49,6 @@ class CoordTab : public QSplitter {
     
  private:
     void createWorkarea();
-    QStandardItemModel *model;
     QToolBar *toolbar;
     QString filename;
     GimeScene *scene;
@@ -52,6 +58,8 @@ class CoordTab : public QSplitter {
 };
 
 
+typedef Georefencia *GeorefenciaPointer;
+
 class Georefencia {
  public:
   Georefencia();
@@ -59,6 +67,13 @@ class Georefencia {
   
   float x1, y1, x2, y2;
   float lo1, la1, lo2, la2;
+
+  friend QDataStream& operator << (QDataStream&, const GeorefenciaPointer&);
+  friend QDataStream& operator >> (QDataStream&, GeorefenciaPointer&);
+
 };
+
+QDataStream& operator << (QDataStream&, const GeorefenciaPointer&);
+QDataStream& operator >> (QDataStream&, GeorefenciaPointer&);
 
 #endif

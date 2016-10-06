@@ -49,8 +49,10 @@ Marker::Marker(int n, QGraphicsItem * parent): QGraphicsPathItem(parent)
 void Marker::mouseReleaseEvent(QGraphicsSceneMouseEvent * event)
 {
   qDebug() << "Pos  " << num << ", " << pos() << endl;
-  model->setItem(num, 0, new QStandardItem(QString::number(pos().x() + 5)));
-  model->setItem(num, 1, new QStandardItem(QString::number(pos().y() + 5)));
+  model->setItem(num, 0, new QTableWidgetItem(QString::number(pos().x() + 5)));
+  model->setItem(num, 1, new QTableWidgetItem(QString::number(pos().y() + 5)));
+  model->setItem(num, 2, new QTableWidgetItem(QString::number(0.0)));
+  model->setItem(num, 3, new QTableWidgetItem(QString::number(0.0)));
   update();
   QGraphicsItem::mouseReleaseEvent(event);
 }

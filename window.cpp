@@ -28,6 +28,8 @@
 
 static QFont text_font;
 
+extern Georefencia *georeferente;
+
 
 Window::Window()
 {
@@ -219,6 +221,11 @@ QWidget *Window::createMenubar(QWidget * window)
   fileMenu->addAction(newAction);
   connect(newAction, SIGNAL(triggered()), this, SLOT(guardaSesionComo()));
 
+  fileMenu->addSeparator();
+  newAction = new QAction(QObject::trUtf8("Guarda &trayectoria"), this);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(guardaTrayectoria()));	
+  fileMenu->addAction(newAction);
+  
   fileMenu->addSeparator();
   newAction = new QAction(QObject::trUtf8("Exporta a &JPEG"), this);
   fileMenu->addAction(newAction);
@@ -771,6 +778,37 @@ bool Window::renderToJPEG()
 }
 
 
+bool Window::guardaTrayectoria()
+{
+  if (Path::selected == NULL) {
+    QMessageBox::warning(this, "Error", "Selecciona primero una trayectoria");
+    return false;
+  } else if (georeferente == NULL) {
+    QMessageBox::warning(this, "Error", "Define primero las coordenadas");
+    return false;
+  } else {
+    qDebug() << "Path selected " << *Path::selected << endl;
+    QString fn = Path::selected->getName()+".tray";
+    QFile file(fn);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+      return false;
+    QTextStream out(&file);
+    QPolygon poly = Path::selected->toPolygon();
+    foreach (QPoint p, poly) {
+      float x, y, la, lo;
+      x = p.x();
+      y = p.y();
+      georeferente->compute(x, y, la, lo);
+      qDebug() << x << y << la << lo << endl;
+      out << la << " " << lo << endl;
+    }
+    file.flush();
+    QMessageBox::information(this, "Trayectoria guardada", fn);
+  }
+  return true;
+}
+
+
 bool Window::guardaSesionComo()
 {
 	filename = QFileDialog::getSaveFileName(0,
@@ -798,6 +836,11 @@ bool Window::guardaSesion()
 	foreach (Path *path, pathlist) {
 		outStream << path;
 	}
+	if (georeferente!=NULL) {
+	  outStream << 1;
+	  outStream << georeferente;
+	} else 
+	  outStream << 0;
 	
 	printf("Guardo %d [%d]\n", pathlist.size(), pathmodel->stringList().size());
 	
@@ -835,7 +878,12 @@ bool Window::cargaSesion()
 		inStream >> path;
 		pathlist.append(path);
 	}
-	
+	int isgr;
+	inStream >> isgr;
+	if (isgr == 1) {
+	  inStream >> georeferente;
+	  coordtab->feedFromGeoreferencing();
+	}
 	QStringList plist;
 	foreach (Path *path, pathlist) {
 		escena->addPath(path);

@@ -15,7 +15,8 @@
 #define MARKER_H
 
 #include <QGraphicsItem>
-#include <QStandardItemModel>
+#include <QTableWidget>
+
 
 
 class Marker : public QGraphicsPathItem
@@ -23,7 +24,7 @@ class Marker : public QGraphicsPathItem
  public:
   Marker(int n, QGraphicsItem * parent = 0);
   void setNumber(int i) { num = i; }
-  void setModel(QStandardItemModel *m) { model = m; }
+  void setModel(QTableWidget *m) { model = m; }
   
   QRectF boundingRect() const;
 
@@ -33,7 +34,7 @@ class Marker : public QGraphicsPathItem
  private:
   int num;
   int width, halfwidth, eyepos, eyewidth;
-  QStandardItemModel *model;
+  QTableWidget *model;
 };
 
 

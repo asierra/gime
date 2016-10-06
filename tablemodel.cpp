@@ -93,24 +93,25 @@ int TableModel::rowCount(const QModelIndex &parent) const
      return 2;
  }
 
+
 QVariant TableModel::data(const QModelIndex &index, int role) const
  {	
-     if (!index.isValid())
-         return QVariant();
-
-     if (index.row() >= listNames.size() || index.row() < 0)
-         return QVariant();
-
-     if (role == Qt::DisplayRole) {
-         if (index.column() == 0) {
-			QFileInfo pathInfo(listNames.at(index.row()));
-			return pathInfo.fileName();	
-//             return listNames.at(index.row());
-		} else if (index.column() == 1)
-			return listDates.at(index.row()).toString("yyyy-MM-dd-hh:mm");
-     }
+   if (!index.isValid())
      return QVariant();
+
+   if (index.row() >= listNames.size() || index.row() < 0)
+     return QVariant();
+
+   if (role == Qt::DisplayRole) {
+     if (index.column() == 0) {
+       QFileInfo pathInfo(listNames.at(index.row()));
+       return pathInfo.fileName();	
+     } else if (index.column() == 1)
+       return listDates.at(index.row()).toString("yyyy-MM-dd-hh:mm");
+   }
+   return QVariant();
  }
+
 
 QVariant TableModel::headerData(int section, Qt::Orientation orientation, int role) const
  {

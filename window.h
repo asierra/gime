@@ -57,6 +57,7 @@ class Window : public QSplitter {
     bool cargaSesionComo();
     bool guardaSesion();
     bool guardaSesionComo();
+    bool guardaTrayectoria();
     bool exportPathAsEPS();
     bool renderToJPEG();
     

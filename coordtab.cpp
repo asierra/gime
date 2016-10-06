@@ -11,32 +11,26 @@
  * Centro de Ciencias de la Atmosfera, UNAM         
  */
 #include <QDebug>
-
 #include "coordtab.h"
 #include "marker.h"
 
-Georefencia georeferencia;
+Georefencia *georeferente;
 
 
 CoordTab::CoordTab(QWidget * parent): QSplitter(parent)
 {
   setOrientation(Qt::Vertical);
-  model = new QStandardItemModel(2, 4, this);
-  model->setHorizontalHeaderItem(0, new QStandardItem(QString("X")));
-  model->setHorizontalHeaderItem(1, new QStandardItem(QString("Y")));
-  model->setHorizontalHeaderItem(2, new QStandardItem(QString("lo")));
-  model->setHorizontalHeaderItem(3, new QStandardItem(QString("la")));
   listcoords = NULL;
   ncoords = 0;
   scene = NULL;
-  
+  georeferente = NULL;
   createWorkarea();
 }
 
 
 CoordTab::~CoordTab()
 {
-  delete model;
+  delete listcoords;
 }
 
 
@@ -64,11 +58,13 @@ void CoordTab::createWorkarea()
   connect(action, SIGNAL(triggered()), this, SLOT(computeGeoreferencing()));
   toolbar->addAction(action);  
 
-  listcoords = new QTableView(this);
-  listcoords->setModel(model);
+  listcoords = new QTableWidget(this);
+  listcoords->setRowCount(2);
+  listcoords->setColumnCount(4);
+  QStringList m_TableHeader;
+  m_TableHeader << "X" << "Y" << "lo" << "la";
+  listcoords->setHorizontalHeaderLabels(m_TableHeader);
   listcoords->setAlternatingRowColors(true);
-  listcoords->setSelectionBehavior(QAbstractItemView::SelectItems);
-  listcoords->setTextElideMode(Qt::ElideLeft);  
   addWidget(listcoords);
 }
 
@@ -85,7 +81,7 @@ void CoordTab::toogleVisible()
 void CoordTab::addCoord()
 {
   Marker *marker = new Marker(ncoords++);
-  marker->setModel(model);
+  marker->setModel(listcoords);
   if (scene != NULL)
     scene->addMarker(marker);
 }
@@ -100,16 +96,43 @@ void CoordTab::removeCoord()
 
 void CoordTab::computeGeoreferencing()
 {
-  qDebug() << "Computando..." << endl;
+  if (georeferente==NULL)
+    georeferente = new Georefencia();
 
-  georeferencia.x1 = model->item(0, 0)->data().toFloat();
-  georeferencia.y1 = model->item(1, 0)->data().toFloat();
-  georeferencia.lo1 = model->item(2, 0)->data().toFloat();
-  georeferencia.la1 = model->item(3, 0)->data().toFloat();
-  georeferencia.x2 = model->item(0, 1)->data().toFloat();
-  georeferencia.y2 = model->item(1, 1)->data().toFloat();
-  georeferencia.lo2 = model->item(2, 1)->data().toFloat();
-  georeferencia.la2 = model->item(3, 1)->data().toFloat();
+  georeferente->x1 = getValue(0, 0);
+  georeferente->y1 = getValue(0, 1);
+  georeferente->x2 = getValue(1, 0);
+  georeferente->y2 = getValue(1, 1);
+
+  float lo1 = getValue(0, 2);
+  float la1 = getValue(0, 3);
+  float lo2 = getValue(1, 2);
+  float la2 = getValue(1, 3);
+
+  if (lo1==lo2 || la1==la2) {
+    QMessageBox::warning(this, "Error", "Corrige latitudes y longitudes.");
+    return;
+  }
+  
+  georeferente->lo1 = lo1;
+  georeferente->la1 = la1;
+  georeferente->lo2 = lo2;
+  georeferente->la2 = la2;
+}
+
+
+void CoordTab::feedFromGeoreferencing()
+{
+  if (georeferente!=NULL) {
+    listcoords->setItem(0, 0, new QTableWidgetItem(QString::number(georeferente->x1)));
+    listcoords->setItem(0, 1, new QTableWidgetItem(QString::number(georeferente->y1)));
+    listcoords->setItem(0, 2, new QTableWidgetItem(QString::number(georeferente->lo1)));
+    listcoords->setItem(0, 3, new QTableWidgetItem(QString::number(georeferente->la1)));
+    listcoords->setItem(1, 0, new QTableWidgetItem(QString::number(georeferente->x2)));
+    listcoords->setItem(1, 1, new QTableWidgetItem(QString::number(georeferente->y2)));
+    listcoords->setItem(1, 2, new QTableWidgetItem(QString::number(georeferente->lo2)));
+    listcoords->setItem(1, 3, new QTableWidgetItem(QString::number(georeferente->la2)));
+  }
 }
 
 
@@ -125,3 +148,34 @@ void Georefencia::compute(float x, float y, float &lo, float &la)
   la = la1 + (y1 - y) * (la2 - la1) / (y1 - y2);
 }
 
+
+QDataStream& operator<<(QDataStream& stream, const GeorefenciaPointer &georf)
+{
+  stream << georf->x1;
+  stream << georf->y1;
+  stream << georf->lo1;
+  stream << georf->la1;
+  stream << georf->x2;
+  stream << georf->y2;
+  stream << georf->lo2;
+  stream << georf->la2;
+        
+  return stream;
+}
+
+
+QDataStream& operator>>(QDataStream& stream, GeorefenciaPointer &georf)
+{
+  georf = new Georefencia();
+
+  stream >> georf->x1;
+  stream >> georf->y1;
+  stream >> georf->lo1;
+  stream >> georf->la1;
+  stream >> georf->x2;
+  stream >> georf->y2;
+  stream >> georf->lo2;
+  stream >> georf->la2;
+
+  return stream;
+}
