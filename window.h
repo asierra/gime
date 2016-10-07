@@ -57,8 +57,10 @@ class Window : public QSplitter {
     bool cargaSesionComo();
     bool guardaSesion();
     bool guardaSesionComo();
+    bool guardaSesionActual();
     bool guardaTrayectoria();
     bool exportPathAsEPS();
+    bool exportAsAPNG();
     bool renderToJPEG();
     
     bool extractDatesFromNames();

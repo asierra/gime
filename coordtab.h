@@ -50,7 +50,6 @@ class CoordTab : public QSplitter {
  private:
     void createWorkarea();
     QToolBar *toolbar;
-    QString filename;
     GimeScene *scene;
     int ncoords;
     QAction *visibleAction;

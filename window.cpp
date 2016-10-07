@@ -28,6 +28,8 @@
 
 static QFont text_font;
 
+extern int exportToAPNG(QString filename, QStringList list, GimeScene *escena=NULL);
+
 extern Georefencia *georeferente;
 
 
@@ -94,14 +96,14 @@ bool Window::extractDatesFromNames()
   QStringList list = model->stringList();
 		
   QFileInfo pathInfo(list.at(0));
-  QString filename( pathInfo.fileName() );
+  QString filenamei( pathInfo.fileName() );
 	
   // Separa digitos de no digitos
   QRegExp rx("(\\d+)");
-  QStringList ldigs = filename.split(QRegExp("\\D+"), QString::SkipEmptyParts);
-  QStringList ltext = filename.split(rx, QString::SkipEmptyParts);
+  QStringList ldigs = filenamei.split(QRegExp("\\D+"), QString::SkipEmptyParts);
+  QStringList ltext = filenamei.split(rx, QString::SkipEmptyParts);
   
-  k = rx.indexIn(filename);
+  k = rx.indexIn(filenamei);
   if (k==0)
     ltext.insert(0, QString());
   
@@ -157,8 +159,8 @@ bool Window::extractDatesFromNames()
 
   for (int i = 0; i < list.size(); ++i) {		
     QFileInfo pathInfo(list.at(i));
-    QString filename( pathInfo.completeBaseName() );		
-    QString f = filename;
+    QString filenamei( pathInfo.completeBaseName() );		
+    QString f = filenamei;
     QDateTime dt;
     if (f.size() == format.size()) {
       if (julian_pos > -1) {
@@ -220,6 +222,10 @@ QWidget *Window::createMenubar(QWidget * window)
   newAction = new QAction(QObject::trUtf8("&Guarda sesión como..."), this);	
   fileMenu->addAction(newAction);
   connect(newAction, SIGNAL(triggered()), this, SLOT(guardaSesionComo()));
+  newAction = new QAction(QObject::trUtf8("&Guarda sesión actual"), this);
+  newAction->setShortcut(QKeySequence(QKeySequence::Save));	
+  fileMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(guardaSesionActual()));
 
   fileMenu->addSeparator();
   newAction = new QAction(QObject::trUtf8("Guarda &trayectoria"), this);
@@ -239,6 +245,10 @@ QWidget *Window::createMenubar(QWidget * window)
 //	fileMenu->addAction(newAction);
 //	connect(newAction, SIGNAL(triggered()), this, SLOT(exportPathAsSVG()));
 	
+  newAction = new QAction(QObject::trUtf8("Exporta a APNG"), this);     
+  fileMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(exportAsAPNG()));
+
   fileMenu->addSeparator();
   newAction = new QAction(QObject::trUtf8("&Salir"), this);
   newAction->setShortcut(QKeySequence(QKeySequence::Quit));
@@ -778,6 +788,16 @@ bool Window::renderToJPEG()
 }
 
 
+bool Window::exportAsAPNG()
+{
+        QString filename = QFileDialog::getSaveFileName(0, tr("Exportar a APNG"),
+        "", tr("APNG files (*.apng)"));
+        
+        exportToAPNG(filename, model->stringList(), escena);
+        return true;
+}
+
+
 bool Window::guardaTrayectoria()
 {
   if (Path::selected == NULL) {
@@ -817,6 +837,13 @@ bool Window::guardaSesionComo()
 }
 
 
+bool  Window::guardaSesionActual()
+{
+  qDebug() << filename;
+  return guardaSesion();
+}
+
+
 bool Window::guardaSesion()
 {    
 	if (filename=="sesion.gime" && QMessageBox::warning(this, tr("Guardar sesion"),
@@ -850,10 +877,11 @@ bool Window::guardaSesion()
 
 bool Window::cargaSesionComo()
 {
-	filename = QFileDialog::getOpenFileName(this,
-	     QObject::trUtf8("Carga sesión"), "sesion.gime", tr("GIME Sessions (*.gime)"));
+  filename = QFileDialog::getOpenFileName(this,
+     QObject::trUtf8("Carga sesión"), "sesion.gime", tr("GIME Sessions (*.gime)"));
 	
-	return cargaSesion();;
+  setWindowTitle(tr("GIME - ")+filename);
+  return cargaSesion();;
 }
 
 
@@ -903,8 +931,6 @@ bool Window::cargaSesion()
 
 void Window::keyPressEvent(QKeyEvent *event)
 {
-  printf("Tecla oprimida \n");
-  
   switch (event->key()) {
   case Qt::Key_F:
     toggleLabel();
