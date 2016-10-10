@@ -38,7 +38,6 @@ Window::Window()
   createWorkarea();
   setStretchFactor(0, 1);
   setStretchFactor(1, 0);
-  setWindowTitle(tr("GIME"));
   model = NULL;
   pathmodel = NULL;
   nuevaSesion();
@@ -54,7 +53,8 @@ Window::~Window()
 
 
 bool Window::nuevaSesion()
-{
+{  
+  setWindowTitle(tr("GIME"));
   if (model!=NULL)
     delete model;
   if (pathmodel!=NULL)
@@ -831,9 +831,13 @@ bool Window::guardaTrayectoria()
 
 bool Window::guardaSesionComo()
 {
-	filename = QFileDialog::getSaveFileName(0,
-	     QObject::trUtf8("Guarda sesión"), "", tr("GIME Sessions (*.gime)"));
-	return guardaSesion();
+  filename = QFileDialog::getSaveFileName(0,
+	     QObject::trUtf8("Guarda sesión"), "",
+	     tr("GIME Sessions (*.gime)"));
+  if (!filename.endsWith(".gime"))
+    filename.append(".gime");
+  setWindowTitle(tr("GIME - ")+filename);
+  return guardaSesion();
 }
 
 
