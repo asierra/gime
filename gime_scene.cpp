@@ -69,7 +69,7 @@ void GimeScene::removePath()
 				break;
 			idx++;
 		}
-		printf("removing path %d\n", idx);
+		//printf("removing path %d\n", idx);
 		Node *node = nodelist.at(idx);
 		QGraphicsItem *item = itemlist.at(idx);
 		if (pathgroup!=0)
@@ -185,7 +185,23 @@ void GimeScene::removeMarker()
 
 void GimeScene::showPaths(bool unhide)
 {
-  if (unhide) {
+  if (Path::selected != NULL) {
+    int idx = 0;
+    foreach (Node *node, nodelist) {
+      if (Path::selected==node->getPath())
+	break;
+      idx++;
+    }
+    QGraphicsItem *item = itemlist.at(idx);
+    
+    if (unhide) {
+      item->show();
+      //     pathgroup->hide();
+    } else {
+      pathgroup->show();
+      item->hide();
+    }
+  } else if (unhide) {
     if (pathgroup!=0)
       pathgroup->show();
   } else if (pathgroup!=0)
@@ -196,7 +212,6 @@ void GimeScene::showPaths(bool unhide)
 void GimeScene::showLabels(bool unhide)
 {
   if (!labellist.isEmpty()) {
-    //    printf("Mostrando labels\n");
     foreach (QGraphicsItem* item, labellist) {      
       if (unhide) 
 	item->show();

@@ -14,14 +14,11 @@
 #ifndef PATH_H
 #define PATH_H
 
-#include <stdio.h>
 #include <QPolygon>
-
 #include "tablemodel.h"
 
 
 class Path;
-
 typedef Path *PathPointer;
 
 
@@ -59,6 +56,7 @@ class Path : public QPolygon
   static TableModel *model;
   static QColor defaultColor;
   QColor color;
+  bool visible;
 	
   friend QDataStream& operator << (QDataStream&, const PathPointer&);
   friend QDataStream& operator >> (QDataStream&, PathPointer&);

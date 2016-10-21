@@ -15,9 +15,8 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QPainter>
 #include <QStyleOption>
-
+#include <qdebug.h>
 #include "path.h"
-
 
 
 int Path::image_idx = 0;
@@ -29,6 +28,7 @@ TableModel *Path::model = NULL;
 Path::Path(int size): QPolygon(size)
 {
   color = defaultColor;
+  visible = true;
 }
 
 
@@ -84,42 +84,54 @@ QRectF Path::boundingRectAdjacent() const
 
 void Path::setPosition(QPointF p)
 {
-//	printf("punto %d %d\n", image_idx, size());
-	setPoint(image_idx, p.toPoint());
+  setPoint(image_idx, p.toPoint());
 }
 
 
 void Path::deletePosition()
 {
-	printf("Borrando %d\n", image_idx);
-	setPoint(image_idx, QPoint());
+  setPoint(image_idx, QPoint());
 }
 
 
 QDataStream& operator<<(QDataStream& stream, const PathPointer &path)
 {
-//	printf("Guardand %s [%d]\n", path->getName().toStdString().c_str(), path->size());
-	stream << path->getName();
-	stream << *(dynamic_cast<QPolygon*>(path));
+  bool uses_color = false;
 	
-	return stream;
+  QString name = path->getName();
+  if (path->color!=Path::defaultColor) {
+    name = "COLOR$%"+name;
+    uses_color = true;
+    qDebug() <<  "Save Color " << name << endl;
+  }	
+  stream << name;
+  stream << *(dynamic_cast<QPolygon*>(path));
+	
+  if (uses_color)
+    stream << path->color;
+	
+  return stream;
 }
 
 
 QDataStream& operator>>(QDataStream& stream, PathPointer &path)
 {
-	QString name;
-	QPolygon p;
+  QString name;
+  QPolygon p;
 	
+  stream >> name;
+  stream >> p;	
+  path = new Path(p);
 	
-	stream >> name;
-	stream >> p;
+  if (name.startsWith("COLOR$%")) {
+    stream >> path->color;
+    qDebug() <<  "Load Color " << name << endl;
+    name = name.remove("COLOR$%");
+  }
 	
-	path = new Path(p);
-	path->setName(name);
-//	printf("Leyend %s [%d]\n", path->getName().toStdString().c_str(), path->size());
+  path->setName(name);
 	
-	return stream;
+  return stream;
 }
 
 
@@ -143,12 +155,12 @@ QString Path::toEPS()
 
 QPolygon Path::toPolygon()
 {
-	QPolygon polygon;
-//	printf("Poly size %d :: ", size());
-	for (int i = 0; i < size(); ++i) 
-		if (!QPolygon::point(i).isNull())
-			polygon << QPolygon::point(i);
-//	printf("Poly %d\n", polygon.size());
-	return polygon;
+  QPolygon polygon;
+
+  for (int i = 0; i < size(); ++i) 
+    if (!QPolygon::point(i).isNull())
+      polygon << QPolygon::point(i);
+
+  return polygon;
 }
 
