@@ -57,7 +57,8 @@ class Path : public QPolygon
   static QColor defaultColor;
   QColor color;
   bool visible;
-	
+  int width;
+  
   friend QDataStream& operator << (QDataStream&, const PathPointer&);
   friend QDataStream& operator >> (QDataStream&, PathPointer&);
 

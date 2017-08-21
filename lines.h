@@ -26,7 +26,6 @@ class Lines : public QGraphicsItem
   
   Path *getPath()  { return path; }
   
-  static int width;
   static bool show_arrows;
   static bool show_icons;
 	

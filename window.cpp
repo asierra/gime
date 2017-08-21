@@ -32,6 +32,22 @@ extern int exportToAPNG(QString filename, QStringList list, GimeScene *escena=NU
 
 extern Georefencia *georeferente;
 
+QList<QGraphicsSimpleTextItem*> texts_list;
+
+
+void Window::addText(QPointF &pos, QString &text, QFont &font)
+{
+  if (!text.isEmpty()) {
+    QGraphicsSimpleTextItem *item = new QGraphicsSimpleTextItem();
+    item->setFlag(QGraphicsItem::ItemIsSelectable);
+    item->setFlag(QGraphicsItem::ItemIsMovable);
+    item->setText(text);
+    item->setPos(pos);
+    item->setFont(font);
+    escena->addItem(item);
+    texts_list.append(item);
+  }
+}
 
 Window::Window()
 {
@@ -70,10 +86,12 @@ bool Window::nuevaSesion()
   filename = "sesion.gime";
   qDeleteAll(pathlist);
   pathlist.clear();
+  qDeleteAll(texts_list);
+  texts_list.clear();
   Labels::font = QFont();
   Labels::texts.clear();
   Labels::shown.clear();
-  Lines::width = 2;
+  //  Lines::width = 2;
   drawpathAction->setChecked(false);
   path_toolbar->setEnabled(false);
   escena = new GimeScene(this);
@@ -873,6 +891,20 @@ bool Window::guardaSesion()
 	} else 
 	  outStream << 0;
 	
+	if (texts_list.size() > 0) {
+	  outStream << texts_list.size();
+	  qDebug() << "Text list " << texts_list.size() << endl;	  
+	  foreach (QGraphicsSimpleTextItem *text_item, texts_list) {
+	    qDebug() << "Pos " << text_item->pos();
+	    qDebug() << "Font " << text_item->font();
+	    qDebug() << "Text " << text_item->text();
+	    outStream << text_item->pos();
+	    outStream << text_item->text();
+	    outStream << text_item->font();
+	  }
+	} else 
+	  outStream << 0;
+	
 	printf("Guardo %d [%d]\n", pathlist.size(), pathmodel->stringList().size());
 	
 	return true;
@@ -909,13 +941,7 @@ bool Window::cargaSesion()
 		Path *path;
 		inStream >> path;
 		pathlist.append(path);
-	}
-	int isgr;
-	inStream >> isgr;
-	if (isgr == 1) {
-	  inStream >> georeferente;
-	  coordtab->feedFromGeoreferencing();
-	}
+	}	
 	QStringList plist;
 	foreach (Path *path, pathlist) {
 		escena->addPath(path);
@@ -923,7 +949,29 @@ bool Window::cargaSesion()
 
 	}
 	pathmodel->setStringList(plist);
-		
+	
+	int isgr;
+	inStream >> isgr;
+	if (isgr == 1) {
+	  inStream >> georeferente;
+	  coordtab->feedFromGeoreferencing();
+	}
+
+	int ntexts;	
+	inStream >> ntexts;
+	if (ntexts > 0) {
+	  for (int i=0; i < ntexts; i++) {
+	    QPointF pos;
+	    QString text;
+	    QFont font;	      
+	    inStream >> pos;
+	    inStream >> text;
+	    inStream >> font;
+	    //	    qDebug() << "Pos " << pos << " " << text << " " << font << endl;
+	    addText(pos, text, font);
+	  }
+	}
+	
 	path_toolbar->setEnabled(true);
 	selImage(0);
 	
@@ -986,10 +1034,15 @@ void Window::cambiaLetra()
 void Window::cambiaAnchoLinea()
 {
   bool ok;
+  int width = (Path::selected != NULL) ? Path::selected->width: 2;
   int i = QInputDialog::getInt(this, tr("Ancho de línea"),
-                                 tr("Ancho:"), Lines::width, 0, 100, 1, &ok);
-  if (ok) 
-    Lines::width = i;
+                                 tr("Ancho:"), width, 0, 100, 1, &ok);
+  if (ok) {
+    if (Path::selected != NULL) {
+      Path::selected->width = i;
+      qDebug() << "Cambiando ancho " << Path::selected->width << endl;  
+    }
+  }
 }
 
 
@@ -997,12 +1050,8 @@ void Window::agregaTexto() {
   bool ok;
   QString text = QInputDialog::getText(this, tr("Texto sobre la imagen"),
 				       tr("Texto:"), QLineEdit::Normal, "", &ok);
-  if (ok && !text.isEmpty()) {
-    QGraphicsSimpleTextItem *item = new QGraphicsSimpleTextItem();
-    //    item->setFont(font);
-    item->setFlag(QGraphicsItem::ItemIsSelectable);
-    item->setFlag(QGraphicsItem::ItemIsMovable);
-    item->setText(text);
-    escena->addItem(item);
+  if (ok) {
+    QPointF p(0,0);
+    addText(p, text, text_font);
   }
 }

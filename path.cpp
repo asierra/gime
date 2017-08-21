@@ -28,6 +28,7 @@ TableModel *Path::model = NULL;
 Path::Path(int size): QPolygon(size)
 {
   color = defaultColor;
+  width = 2;
   visible = true;
 }
 
@@ -96,19 +97,12 @@ void Path::deletePosition()
 
 QDataStream& operator<<(QDataStream& stream, const PathPointer &path)
 {
-  bool uses_color = false;
-	
   QString name = path->getName();
-  if (path->color!=Path::defaultColor) {
-    name = "COLOR$%"+name;
-    uses_color = true;
-    qDebug() <<  "Save Color " << name << endl;
-  }	
+
   stream << name;
-  stream << *(dynamic_cast<QPolygon*>(path));
-	
-  if (uses_color)
-    stream << path->color;
+  stream << *(dynamic_cast<QPolygon*>(path));	
+  stream << path->color;
+  stream << path->width;
 	
   return stream;
 }
@@ -122,13 +116,9 @@ QDataStream& operator>>(QDataStream& stream, PathPointer &path)
   stream >> name;
   stream >> p;	
   path = new Path(p);
-	
-  if (name.startsWith("COLOR$%")) {
-    stream >> path->color;
-    qDebug() <<  "Load Color " << name << endl;
-    name = name.remove("COLOR$%");
-  }
-	
+  
+  stream >> path->color;
+  stream >> path->width;	
   path->setName(name);
 	
   return stream;

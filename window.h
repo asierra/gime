@@ -90,6 +90,7 @@ class Window : public QSplitter {
  private:
     QWidget *createWorkarea();
     QWidget *createMenubar(QWidget * window);
+    void addText(QPointF &pos, QString &text, QFont &font);
     QMenu *fileMenu;
     QMenu *windowMenu;
     QMenu *helpMenu;
