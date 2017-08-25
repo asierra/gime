@@ -38,7 +38,6 @@ void Lines::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWi
 	
   QColor color1 = (Path::selected==path) ? Qt::red: path->color;
   QPen pen = QPen(color1, path->width);
-  printf("Pen w %d\n", pen.width());
   painter->setPen(pen);
   painter->drawPolyline(polygon);
 
