@@ -209,6 +209,17 @@ void GimeScene::showPaths(bool unhide)
 }
 
 
+void GimeScene::showNodes(bool unhide)
+{
+  foreach (Node *node, nodelist) {
+    if (unhide)
+      node->show();
+    else 
+      node->hide();
+  }
+}
+
+
 void GimeScene::showLabels(bool unhide)
 {
   if (!labellist.isEmpty()) {

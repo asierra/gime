@@ -32,6 +32,7 @@ public:
 	void removePath();
 	void showPaths(bool show=true);
 	void showLabels(bool show=true);
+	void showNodes(bool show=true);
 	void addMarker(Marker *item);
 	void removeMarker();
 	void showMarkers(bool show=true);
