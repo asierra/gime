@@ -255,6 +255,11 @@ QWidget *Window::createMenubar(QWidget * window)
   fileMenu->addAction(newAction);
   connect(newAction, SIGNAL(triggered()), this, SLOT(renderToJPEG()));
 	
+  fileMenu->addSeparator();
+  newAction = new QAction(QObject::trUtf8("Exporta a &PNG transparente"), this);
+  fileMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(renderToPNG()));
+	
   newAction = new QAction(QObject::trUtf8("&Exporta a EPS"), this);	
   fileMenu->addAction(newAction);
   connect(newAction, SIGNAL(triggered()), this, SLOT(exportPathAsEPS()));
@@ -546,9 +551,10 @@ bool Window::asignaFecha(const QModelIndex &index) {
 void Window::pathClicked(const QModelIndex &index) {
 	int i = index.row();	
 
-	if (Path::selected == pathlist.at(i))
+	if (Path::selected == pathlist.at(i)) {
 		Path::selected = NULL;
-	else
+		listPaths->clearSelection();
+	} else
 		Path::selected = pathlist.at(i);
 	view->selectPath();
 }
@@ -650,10 +656,8 @@ void Window::drawPath()
   if (drawpathAction->isChecked())
     escena->showPaths(true);
   else
-    escena->showPaths(false);
-	
-  QWidget * viewport = view->viewport();
-  viewport->update();
+    escena->showPaths(false);	
+  updateview();
 }
 
 
@@ -671,9 +675,7 @@ void Window::drawLabels()
     escena->showLabels(true);
   } else
     escena->showLabels(false);
-
-  QWidget * viewport = view->viewport();
-  viewport->update();
+  updateview();
 }
 
 
@@ -681,11 +683,8 @@ void Window::toggleLabel()
 {
   if (drawLabelsAction->isChecked()) {
     Labels::shown[Path::image_idx] =  !Labels::shown[Path::image_idx];
-    printf("togleando %d\n", Labels::shown[Path::image_idx]);
-    
     escena->updateShownLabels();
-    QWidget * viewport = view->viewport();
-    viewport->update();
+    updateview();  
   } 
 }
 
@@ -698,8 +697,7 @@ void Window::spaceLabels(int space)
       Labels::shown[i] = is_shown;
     }
     escena->updateShownLabels();
-    QWidget * viewport = view->viewport();
-    viewport->update();
+    updateview();  
   }
 }
 
@@ -730,10 +728,7 @@ void Window::labelManualFormat()
   
   Labels::texts = model->dateStringList(format);
   escena->updateTextLabels();
-  printf("Formato manual %s\n", format.toStdString().c_str());		
-  
-  QWidget * viewport = view->viewport();
-  viewport->update();
+  updateview();  
 }
 
 
@@ -742,10 +737,8 @@ void Window::drawArrows()
   if (drawArrowsAction->isChecked())
     Lines::show_arrows = true;
   else
-    Lines::show_arrows = false;
-  
-  QWidget * viewport = view->viewport();
-  viewport->update();
+    Lines::show_arrows = false;  
+  updateview(); 
 }
 
 void Window::drawHourIcons()
@@ -753,10 +746,8 @@ void Window::drawHourIcons()
   if (drawHourIconsAction->isChecked())
     Lines::show_icons = true;
   else
-    Lines::show_icons = false;
-  
-  QWidget * viewport = view->viewport();
-  viewport->update();
+    Lines::show_icons = false;  
+  updateview(); 
 }
 
 
@@ -801,6 +792,32 @@ bool Window::renderToJPEG()
 		painter.end();
 		img.save("gime.jpg", "JPG");
 		return true;
+	}
+	return false;
+}
+
+
+bool Window::renderToPNG()
+{
+	if (!view->fondo.isNull()) {	  
+	  QString pngfile = QFileDialog::getSaveFileName(0, tr("Exportar a PNG transparente"),
+							 "", tr("PNG files (*.png)"));
+	
+	  QImage img(view->fondo.size(), QImage::Format_ARGB32_Premultiplied);
+	  img.fill(qRgba(0,0,0,0));
+	  QPainter painter(&img);
+	  //painter.setRenderHint(QPainter::Antialiasing);
+	  //		painter.drawImage(view->fondo.rect(), view->fondo);
+	  QColor color(Qt::white);
+	  color.setAlphaF(0.25);
+	  //painter.fillRect(view->fondo.rect(), QBrush(color));
+	  painter.setBackground(QBrush(color));
+	  escena->showNodes(false);
+	  escena->render(&painter);
+	  painter.end();
+	  img.save(pngfile, "PNG");
+	  escena->showNodes(true);
+	  return true;
 	}
 	return false;
 }
@@ -868,46 +885,51 @@ bool  Window::guardaSesionActual()
 
 bool Window::guardaSesion()
 {    
-	if (filename=="sesion.gime" && QMessageBox::warning(this, tr("Guardar sesion"),
-		                                tr("¿Desea sobreescribir la sesion anonima?"),
-		                                QMessageBox::Save | QMessageBox::Cancel,
-		                                QMessageBox::Save)==QMessageBox::Cancel)
-		return false;
+  if (filename=="sesion.gime" && QMessageBox::warning(this, tr("Guardar sesion"),
+						      tr("¿Desea sobreescribir la sesion anonima?"),
+						      QMessageBox::Save | QMessageBox::Cancel,
+						      QMessageBox::Save)==QMessageBox::Cancel)
+    return false;
 	
-	QFile file(filename);
-	if (!file.open(QIODevice::WriteOnly))
-		return false;
+  QFile file(filename);
+  if (!file.open(QIODevice::WriteOnly))
+    return false;
 
-	QDataStream outStream(&file);
-	outStream.setVersion(QDataStream::Qt_4_7);
-	outStream << model->fullStringList();
-	outStream << pathlist.size();
-	foreach (Path *path, pathlist) {
-		outStream << path;
-	}
-	if (georeferente!=NULL) {
-	  outStream << 1;
-	  outStream << georeferente;
-	} else 
-	  outStream << 0;
+  QDataStream outStream(&file);
+  outStream << (quint32)GIME_MAGIC;
+  outStream << (quint32)GIME_DATA_VERSION;
+  outStream.setVersion(QDataStream::Qt_4_7);
+
+  outStream << model->fullStringList();
+
+  outStream << pathlist.size();
+  foreach (Path *path, pathlist) {
+    outStream << path;
+  }
+  
+  if (georeferente!=NULL) {
+    outStream << 1;
+    outStream << georeferente;
+  } else 
+    outStream << 0;
 	
-	if (texts_list.size() > 0) {
-	  outStream << texts_list.size();
-	  qDebug() << "Text list " << texts_list.size() << endl;	  
-	  foreach (QGraphicsSimpleTextItem *text_item, texts_list) {
-	    qDebug() << "Pos " << text_item->pos();
-	    qDebug() << "Font " << text_item->font();
-	    qDebug() << "Text " << text_item->text();
-	    outStream << text_item->pos();
-	    outStream << text_item->text();
-	    outStream << text_item->font();
-	  }
-	} else 
-	  outStream << 0;
+  if (texts_list.size() > 0) {
+    outStream << texts_list.size();
+    qDebug() << "Text list " << texts_list.size() << endl;	  
+    foreach (QGraphicsSimpleTextItem *text_item, texts_list) {
+      qDebug() << "Pos " << text_item->pos();
+      qDebug() << "Font " << text_item->font();
+      qDebug() << "Text " << text_item->text();
+      outStream << text_item->pos();
+      outStream << text_item->text();
+      outStream << text_item->font();
+    }
+  } else 
+    outStream << 0;
 	
-	printf("Guardo %d [%d]\n", pathlist.size(), pathmodel->stringList().size());
+  printf("Guardo %d [%d]\n", pathlist.size(), pathmodel->stringList().size());
 	
-	return true;
+  return true;
 }
 
 
@@ -923,61 +945,74 @@ bool Window::cargaSesionComo()
 
 bool Window::cargaSesion()
 {
-	QFile file(filename);
-	if (!file.open(QIODevice::ReadOnly))
-		return false;
+  qint32 magic, version;
+  
+  QFile file(filename);
+  if (!file.open(QIODevice::ReadOnly))
+    return false;
 
-	QDataStream inStream(&file);
-	inStream.setVersion(QDataStream::Qt_4_7);
+  QDataStream inStream(&file);
 
-	QStringList list;
-	inStream >> list;
-//	model->setStringList(list);
-	model->setFullStringList(list);
-	
-	int psize;
-	inStream >> psize;
-	for (int i=0; i < psize; i++) {
-		Path *path;
-		inStream >> path;
-		pathlist.append(path);
-	}	
-	QStringList plist;
-	foreach (Path *path, pathlist) {
-		escena->addPath(path);
-		plist << path->getName();
+  inStream >> magic;
+  if (magic != GIME_MAGIC) {
+    QMessageBox::warning(this, trUtf8("Cargar GIME"), trUtf8("Formato incorrecto: ") + QString::number(magic));
+    return false;
+  }
+  
+  inStream >> version;
+  if (version != GIME_DATA_VERSION) {    
+    QMessageBox::warning(this, trUtf8("Cargar GIME"), trUtf8("Versión incorrecta: ") + QString::number(version));
+    return false;
+  }
+  
+  inStream.setVersion(QDataStream::Qt_4_7);
 
-	}
-	pathmodel->setStringList(plist);
+  QStringList list;
+  inStream >> list;
+  model->setFullStringList(list);
 	
-	int isgr;
-	inStream >> isgr;
-	if (isgr == 1) {
-	  inStream >> georeferente;
-	  coordtab->feedFromGeoreferencing();
-	}
-
-	int ntexts;	
-	inStream >> ntexts;
-	if (ntexts > 0) {
-	  for (int i=0; i < ntexts; i++) {
-	    QPointF pos;
-	    QString text;
-	    QFont font;	      
-	    inStream >> pos;
-	    inStream >> text;
-	    inStream >> font;
-	    //	    qDebug() << "Pos " << pos << " " << text << " " << font << endl;
-	    addText(pos, text, font);
-	  }
-	}
+  int psize;
+  inStream >> psize;
+  for (int i=0; i < psize; i++) {
+    Path *path;
+    inStream >> path;
+    pathlist.append(path);
+  }	
+  QStringList plist;
+  foreach (Path *path, pathlist) {
+    escena->addPath(path);
+    plist << path->getName();
+    
+  }
+  pathmodel->setStringList(plist);
+  
+  int isgr;
+  inStream >> isgr;
+  if (isgr == 1) {
+    inStream >> georeferente;
+    coordtab->feedFromGeoreferencing();
+  }
+  
+  int ntexts;	
+  inStream >> ntexts;
+  if (ntexts > 0) {
+    for (int i=0; i < ntexts; i++) {
+      QPointF pos;
+      QString text;
+      QFont font;	      
+      inStream >> pos;
+      inStream >> text;
+      inStream >> font;
+      addText(pos, text, font);
+    }
+  }
 	
-	path_toolbar->setEnabled(true);
-	selImage(0);
+  path_toolbar->setEnabled(true);
+  selImage(0);
 	
-	printf("strings %d [%d]\n", list.size(), model->stringList().size());
-	printf("paths %d [%d]\n", pathlist.size(), pathmodel->stringList().size());
-	return true;
+  printf("strings %d [%d]\n", list.size(), model->stringList().size());
+  printf("paths %d [%d]\n", pathlist.size(), pathmodel->stringList().size());
+  return true;
 }
 
 
@@ -1021,12 +1056,7 @@ void Window::cambiaLetra()
       Labels::font = font;
       escena->updateFontLabels();
     }
-    
-    view->update();
-    printf("Font size %d familia %s\n", font.pointSize(), font.family().toStdString().c_str());
-    //view->setFont(font);
-    printf("Font cambiada ");
-    // the user clicked OK and font is set to the font the user selected
+    updateview();	    
   } 
 }
 
@@ -1041,7 +1071,10 @@ void Window::cambiaAnchoLinea()
     if (Path::selected != NULL) {
       Path::selected->width = i;
       qDebug() << "Cambiando ancho " << Path::selected->width << endl;  
-    }
+    } else      
+      foreach (Path *path, pathlist) 
+	path->width = i;
+    updateview();	
   }
 }
 
@@ -1054,4 +1087,10 @@ void Window::agregaTexto() {
     QPointF p(0,0);
     addText(p, text, text_font);
   }
+}
+
+
+void Window::updateview() {
+    QWidget * viewport = view->viewport();
+    viewport->update();	
 }

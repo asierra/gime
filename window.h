@@ -14,6 +14,10 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+#define GIME_MAGIC 0xCCA0ABDC
+#define GIME_DATA_VERSION 2
+
+
 #include <QSplitter>
 #include <QListView>
 #include <QTableView>
@@ -62,6 +66,7 @@ class Window : public QSplitter {
     bool exportPathAsEPS();
     bool exportAsAPNG();
     bool renderToJPEG();
+    bool renderToPNG();
     
     bool extractDatesFromNames();
     void cambiaLetra();
@@ -88,6 +93,7 @@ class Window : public QSplitter {
     bool asignaFecha(const QModelIndex &index);
 	
  private:
+    void updateview();
     QWidget *createWorkarea();
     QWidget *createMenubar(QWidget * window);
     void addText(QPointF &pos, QString &text, QFont &font);
