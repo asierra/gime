@@ -15,7 +15,7 @@
 #define WINDOW_H
 
 #define GIME_MAGIC 0xCCA0ABDC
-#define GIME_DATA_VERSION 2
+#define GIME_DATA_VERSION 3
 
 
 #include <QSplitter>
@@ -71,7 +71,8 @@ class Window : public QSplitter {
     bool extractDatesFromNames();
     void cambiaLetra();
     void cambiaAnchoLinea();
-		
+    void cambiaEstiloLinea();
+    
     void cambiaFecha();
     void imageSelected(const QModelIndex &index);
     void pathClicked(const QModelIndex &index);

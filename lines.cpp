@@ -36,8 +36,11 @@ void Lines::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWi
 {
   QPolygon polygon = path->toPolygon();
 	
-  QColor color1 = (Path::selected==path) ? Qt::red: path->color;
-  QPen pen = QPen(color1, path->width);
+  //QColor color1 = (Path::selected==path) ? Qt::red: path->color;
+  //QPen pen = QPen(color1, path->width);
+  QPen pen = path->pen;
+  if (Path::selected==path)
+    pen.setColor(Qt::red);
   painter->setPen(pen);
   painter->drawPolyline(polygon);
 
@@ -66,7 +69,7 @@ void Lines::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWi
 
 void Lines::draw_icons( QPainter *painter )
 {
-  int width = path->width;
+  int width = path->pen.width();
   int r = (width + 1)/2;
 
   for (int i=0;  i < path->size(); i++) {

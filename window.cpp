@@ -57,6 +57,9 @@ Window::Window()
   model = NULL;
   pathmodel = NULL;
   nuevaSesion();
+  QFontDatabase::addApplicationFont(":fonts/WeatherFont.ttf");
+  //  QString family = QFontDatabase::applicationFontFamilies(id).at(0);
+  //  QFont monospace(family);
 }
 
 
@@ -291,6 +294,10 @@ QWidget *Window::createMenubar(QWidget * window)
   editMenu->addAction(newAction);
   connect(newAction, SIGNAL(triggered()), this, SLOT(cambiaAnchoLinea()));
   
+  newAction = new QAction(QObject::trUtf8("Cambia &estilo de línea"), this);	
+  editMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(cambiaEstiloLinea()));
+
   // Text menu
   newAction = new QAction(QObject::trUtf8("Activa &etiquetas"), this);	
   textMenu->addAction(newAction);
@@ -641,7 +648,7 @@ void Window::pathColor()
 {
 	QColor color = QColorDialog::getColor(Path::defaultColor);
 	if (Path::selected!=NULL)
-		Path::selected->color = color;
+	  Path::selected->pen.setColor(color);
 	else
 		Path::defaultColor = color;
 		
@@ -787,10 +794,11 @@ bool Window::renderToJPEG()
 		QColor color(Qt::white);
 		color.setAlphaF(0.25);
 		painter.fillRect(view->fondo.rect(), QBrush(color));
-		//painter.setFont(escena->font());
+		escena->showNodes(false);
 		escena->render(&painter);
 		painter.end();
 		img.save("gime.jpg", "JPG");
+		escena->showNodes(true);
 		return true;
 	}
 	return false;
@@ -828,7 +836,9 @@ bool Window::exportAsAPNG()
         QString filename = QFileDialog::getSaveFileName(0, tr("Exportar a APNG"),
         "", tr("APNG files (*.apng)"));
         
+	escena->showNodes(false);
         exportToAPNG(filename, model->stringList(), escena);
+	escena->showNodes(true);
         return true;
 }
 
@@ -1038,9 +1048,10 @@ void Window::cambiaLetra()
   QFont font = Labels::font;
 
   if (!escena->selectedItems().empty()) {
-    QGraphicsItem *item = escena->selectedItems()[0];
+    QGraphicsSimpleTextItem *item = (QGraphicsSimpleTextItem*)escena->selectedItems()[0];
+    qDebug() << "Typo " << item->type() << endl;
     if (item->parentItem() == 0) {
-      font = text_font;
+      font = item->font();
       text_ok = true;
     }
   }
@@ -1064,16 +1075,38 @@ void Window::cambiaLetra()
 void Window::cambiaAnchoLinea()
 {
   bool ok;
-  int width = (Path::selected != NULL) ? Path::selected->width: 2;
+  int width = (Path::selected != NULL) ? Path::selected->pen.width(): 2;
   int i = QInputDialog::getInt(this, tr("Ancho de línea"),
                                  tr("Ancho:"), width, 0, 100, 1, &ok);
   if (ok) {
     if (Path::selected != NULL) {
-      Path::selected->width = i;
-      qDebug() << "Cambiando ancho " << Path::selected->width << endl;  
+      Path::selected->pen.setWidth(i);
+      qDebug() << "Cambiando ancho " << width << endl;  
     } else      
       foreach (Path *path, pathlist) 
-	path->width = i;
+	path->pen.setWidth(i);
+    updateview();	
+  }
+}
+
+
+void Window::cambiaEstiloLinea()
+{
+  bool ok;
+  QStringList items;
+  items << tr("Solid") << tr("DashLine") << tr("DotLine") << tr("DashDotLine");
+  int selected = (Path::selected != NULL) ? Path::selected->pen.style() - 1: 0;
+
+  QString item = QInputDialog::getItem(this, tr("Estilo de línea"),
+				tr("Estilo:"), items, selected, false, &ok);
+  if (ok) {
+    if (Path::selected != NULL) {
+      Qt::PenStyle style = (Qt::PenStyle)(items.indexOf(item) + 1);
+      Path::selected->pen.setStyle(style);
+      qDebug() << "Cambiando estilo " << style << endl;  
+    } /*else      
+      foreach (Path *path, pathlist) 
+      path->width = i;*/
     updateview();	
   }
 }

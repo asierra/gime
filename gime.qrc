@@ -18,5 +18,6 @@
 <file>icons/mapa.png</file>
 <file>icons/start-here.png</file>
 <file>icons/view-refresh.png</file>
+<file>fonts/WeatherFont.ttf</file>
 </qresource>
 </RCC>

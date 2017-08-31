@@ -15,6 +15,7 @@
 #define PATH_H
 
 #include <QPolygon>
+#include <QPen>
 #include "tablemodel.h"
 
 
@@ -55,9 +56,10 @@ class Path : public QPolygon
   static Path *selected;
   static TableModel *model;
   static QColor defaultColor;
-  QColor color;
+  //  QColor color;
+  QPen pen;
   bool visible;
-  int width;
+  //  int width;
   
   friend QDataStream& operator << (QDataStream&, const PathPointer&);
   friend QDataStream& operator >> (QDataStream&, PathPointer&);

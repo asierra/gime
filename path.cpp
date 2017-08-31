@@ -27,15 +27,13 @@ TableModel *Path::model = NULL;
 
 Path::Path(int size): QPolygon(size)
 {
-  color = defaultColor;
-  width = 2;
+  pen = QPen(defaultColor, 2 /* width */, Qt::SolidLine);
   visible = true;
 }
 
 
 Path::Path(const QPolygon & polygon): QPolygon(polygon)
 {
-	color = defaultColor;
 }
 
 QRectF Path::boundingRectAdjacent() const
@@ -101,8 +99,7 @@ QDataStream& operator<<(QDataStream& stream, const PathPointer &path)
 
   stream << name;
   stream << *(dynamic_cast<QPolygon*>(path));	
-  stream << path->color;
-  stream << path->width;
+  stream << path->pen;
 	
   return stream;
 }
@@ -117,8 +114,7 @@ QDataStream& operator>>(QDataStream& stream, PathPointer &path)
   stream >> p;	
   path = new Path(p);
   
-  stream >> path->color;
-  stream >> path->width;	
+  stream >> path->pen;
   path->setName(name);
 	
   return stream;
