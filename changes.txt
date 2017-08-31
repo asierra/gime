@@ -67,3 +67,11 @@ Thu Apr  7 21:05:38 CDT 2016
 Posiblidad de agregar textos arbitrarios sobre la imagen.
 
 
+Thu Aug 31 13:50:43 CDT 2017
+
+De una semana a hoy se introdujeron varios cambios. Podemos guardar
+como streams los atributos de la línea, como color, ancho y estilo, en
+una QPen y también salvamos el texto y su fuente. Introdujimos una
+fuente con simbolos meteorologicos.
+
+
