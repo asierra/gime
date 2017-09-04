@@ -91,6 +91,7 @@ class Window : public QSplitter {
     void drawHourIcons();
     void pathColor();
     void agregaTexto();
+    void agregaGriego();
     bool asignaFecha(const QModelIndex &index);
 	
  private:

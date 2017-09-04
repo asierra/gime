@@ -22,10 +22,6 @@
 
 
 
-bool Lines::show_arrows = false;
-bool Lines::show_icons = false;
-
-
 Lines::Lines(Path *p): path(p)
 {
     setZValue(-1);
@@ -36,34 +32,40 @@ void Lines::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWi
 {
   QPolygon polygon = path->toPolygon();
 	
-  //QColor color1 = (Path::selected==path) ? Qt::red: path->color;
-  //QPen pen = QPen(color1, path->width);
   QPen pen = path->pen;
   if (Path::selected==path)
     pen.setColor(Qt::red);
   painter->setPen(pen);
   painter->drawPolyline(polygon);
-
-  if (show_arrows && polygon.size() > 1) {
-    int i = polygon.size() - 1;
-    QPoint p2 = polygon.point(i);
-    QPoint p1 = polygon.point(i-1);
-
-    float r = 8;
-    float theta = atan2f(p1.y() - p2.y(), p1.x() - p2.x());
-    float alpha = M_PI/2.0 - theta;
-    float cs = cos(-alpha), sn = sin(-alpha);
-    
-    float x = r*0.5, y = r;
-    QPointF ap1 = p2 + QPointF(-x*cs - sn*y, -x*sn + y*cs);
-    QPointF ap2 = p2 + QPointF( x*cs - sn*y,  x*sn + y*cs);
-
-    painter->drawLine(ap1, p2);
-    painter->drawLine(ap2, p2);
-  }
-
-  if (show_icons && polygon.size() > 0)
+  
+  if (path->show_arrow && polygon.size() > 1)
+    draw_arrows(painter);
+  
+  if (path->show_icon && polygon.size() > 0)
     draw_icons(painter);
+}
+
+
+void Lines::draw_arrows( QPainter *painter )
+{
+  QPolygon polygon = path->toPolygon();
+
+  int i = polygon.size() - 1;
+
+  QPoint p2 = polygon.point(i);
+  QPoint p1 = polygon.point(i-1);
+
+  float r = 8;
+  float theta = atan2f(p1.y() - p2.y(), p1.x() - p2.x());
+  float alpha = M_PI/2.0 - theta;
+  float cs = cos(-alpha), sn = sin(-alpha);
+    
+  float x = r*0.5, y = r;
+  QPointF ap1 = p2 + QPointF(-x*cs - sn*y, -x*sn + y*cs);
+  QPointF ap2 = p2 + QPointF( x*cs - sn*y,  x*sn + y*cs);
+
+  painter->drawLine(ap1, p2);
+  painter->drawLine(ap2, p2);
 }
 
 

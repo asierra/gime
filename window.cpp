@@ -306,6 +306,10 @@ QWidget *Window::createMenubar(QWidget * window)
   newAction = new QAction(QObject::trUtf8("&Agrega texto"), this);	
   textMenu->addAction(newAction);
   connect(newAction, SIGNAL(triggered()), this, SLOT(agregaTexto()));
+  
+  newAction = new QAction(QObject::trUtf8("A&grega griego"), this);	
+  textMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(agregaGriego()));
 
   // Help menu
   newAction = new QAction(QObject::trUtf8("A&yuda"), this);	
@@ -739,25 +743,6 @@ void Window::labelManualFormat()
 }
 
 
-void Window::drawArrows()
-{
-  if (drawArrowsAction->isChecked())
-    Lines::show_arrows = true;
-  else
-    Lines::show_arrows = false;  
-  updateview(); 
-}
-
-void Window::drawHourIcons()
-{
-  if (drawHourIconsAction->isChecked())
-    Lines::show_icons = true;
-  else
-    Lines::show_icons = false;  
-  updateview(); 
-}
-
-
 bool Window::exportPathAsEPS()
 {
 	QString epsfile = QFileDialog::getSaveFileName(0, tr("Exportar EPS"),
@@ -836,9 +821,7 @@ bool Window::exportAsAPNG()
         QString filename = QFileDialog::getSaveFileName(0, tr("Exportar a APNG"),
         "", tr("APNG files (*.apng)"));
         
-	escena->showNodes(false);
         exportToAPNG(filename, model->stringList(), escena);
-	escena->showNodes(true);
         return true;
 }
 
@@ -1042,6 +1025,36 @@ void Window::keyPressEvent(QKeyEvent *event)
   }
 }
 
+
+void Window::drawArrows()
+{
+  bool show_arrows = drawArrowsAction->isChecked();
+
+  if (Path::selected != NULL) {
+    Path::selected->show_arrow = show_arrows;
+      qDebug() << "Cambiando arrow " << endl;  
+    } else      
+      foreach (Path *path, pathlist) 
+	path->show_arrow = show_arrows;
+  
+  updateview(); 
+}
+
+void Window::drawHourIcons()
+{
+  bool show_icons = drawHourIconsAction->isChecked();
+  
+  if (Path::selected != NULL) {
+    Path::selected->show_icon = show_icons;
+    qDebug() << "Cambiando icons " << endl;  
+  } else      
+    foreach (Path *path, pathlist) 
+      path->show_icon = show_icons;
+  
+  updateview(); 
+}
+
+
 void Window::cambiaLetra()
 {
   bool ok, text_ok = false;
@@ -1063,6 +1076,7 @@ void Window::cambiaLetra()
       text_font = font;
       QGraphicsSimpleTextItem *item = (QGraphicsSimpleTextItem*)escena->selectedItems()[0];
       item->setFont(text_font);
+      qDebug() << "Family " << text_font.family() << endl;
     } else {
       Labels::font = font;
       escena->updateFontLabels();
@@ -1109,6 +1123,12 @@ void Window::cambiaEstiloLinea()
       path->width = i;*/
     updateview();	
   }
+}
+
+
+void Window::agregaGriego() {
+  text_font.setFamily("Standard Symbols L");
+  agregaTexto();
 }
 
 

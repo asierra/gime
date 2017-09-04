@@ -26,14 +26,12 @@ class Lines : public QGraphicsItem
   
   Path *getPath()  { return path; }
   
-  static bool show_arrows;
-  static bool show_icons;
-	
  protected:
   void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget); 
   QRectF boundingRect() const;
 
-  void draw_icons( QPainter *painter );
+  void draw_arrows( QPainter *painter );
+  void draw_icons ( QPainter *painter );
 	
 private:
 	Path *path;

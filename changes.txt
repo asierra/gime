@@ -75,3 +75,10 @@ una QPen y también salvamos el texto y su fuente. Introdujimos una
 fuente con simbolos meteorologicos.
 
 
+Mon Sep  4 16:42:48 CDT 2017
+
+Las flechas y los iconos son propiedades de cada path y pueden ser
+modificados igual que el color y ancho y se salvan a disco pues no son
+propiedades de la pluma. La bolita no se quita en animaciones
+(APNG). Hay un menú explícito para escribir en griego.
+

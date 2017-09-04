@@ -56,10 +56,12 @@ class Path : public QPolygon
   static Path *selected;
   static TableModel *model;
   static QColor defaultColor;
-  //  QColor color;
+
+  //  Propiedades de path individual
   QPen pen;
   bool visible;
-  //  int width;
+  bool show_arrow;
+  bool show_icon;
   
   friend QDataStream& operator << (QDataStream&, const PathPointer&);
   friend QDataStream& operator >> (QDataStream&, PathPointer&);

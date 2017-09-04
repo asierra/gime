@@ -25,10 +25,13 @@ QColor Path::defaultColor=Qt::darkBlue;
 TableModel *Path::model = NULL;
 
 
+
 Path::Path(int size): QPolygon(size)
 {
   pen = QPen(defaultColor, 2 /* width */, Qt::SolidLine);
   visible = true;
+  show_arrow = false;
+  show_icon = false;
 }
 
 
@@ -100,6 +103,8 @@ QDataStream& operator<<(QDataStream& stream, const PathPointer &path)
   stream << name;
   stream << *(dynamic_cast<QPolygon*>(path));	
   stream << path->pen;
+  stream << path->show_arrow;
+  stream << path->show_icon;
 	
   return stream;
 }
@@ -115,6 +120,9 @@ QDataStream& operator>>(QDataStream& stream, PathPointer &path)
   path = new Path(p);
   
   stream >> path->pen;
+  stream >> path->show_arrow;
+  stream >> path->show_icon;
+
   path->setName(name);
 	
   return stream;
