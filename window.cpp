@@ -94,7 +94,6 @@ bool Window::nuevaSesion()
   Labels::font = QFont();
   Labels::texts.clear();
   Labels::shown.clear();
-  //  Lines::width = 2;
   drawpathAction->setChecked(false);
   path_toolbar->setEnabled(false);
   escena = new GimeScene(this);
@@ -408,7 +407,7 @@ QWidget * Window::createWorkarea()
   QPixmap pathcolorpixmap(32,32);
   pathcolorpixmap.fill(Path::defaultColor);
   pathColorAction = new QAction(QIcon(pathcolorpixmap), "Cambiar color de trayectoria", this);
-  connect(pathColorAction, SIGNAL(triggered()), this, SLOT(pathColor()));
+  connect(pathColorAction, SIGNAL(triggered()), this, SLOT(setSelectedColor()));
   path_toolbar->addAction(pathColorAction);
 	
   drawLabelsAction = new QAction(QIcon(":/icons/format-text-bold.png"), "Ver etiquetas", this);
@@ -449,6 +448,7 @@ QWidget * Window::createWorkarea()
   listPaths->setAlternatingRowColors(true);
   connect(listPaths, SIGNAL(clicked(QModelIndex)),
 	  this, SLOT(pathClicked(const QModelIndex&)));
+ 
   QTabWidget *lowTab = new QTabWidget(imaSplitter);
   QSplitter *pathSplitter = new QSplitter(Qt::Vertical);
   //  pathSplitter->addWidget(new QLabel("Trayectorias"));
@@ -460,7 +460,6 @@ QWidget * Window::createWorkarea()
   lowTab->addTab(coordtab, "Coordenadas");
   
   imaSplitter->addWidget(lowTab);
-  //imaSplitter->setStretchFactor(2, 1);
   
   addWidget(view);
   addWidget(imaSplitter);
@@ -533,29 +532,28 @@ void Window::help()
 }
 
 void Window::imageSelected(const QModelIndex &index) {
-	int i = index.row();
-	Path::image_idx = i;
-	escena->updatePositions();
-   	view->setImage(model->stringList().at(i));	
-//	if (index.column() > 0) 
-		datetime->setDateTime(model->dateTimeAt(i));
+  int i = index.row();
+  Path::image_idx = i;
+  escena->updatePositions();
+  view->setImage(model->stringList().at(i));	
+  datetime->setDateTime(model->dateTimeAt(i));
 }
 
 
 void Window::cambiaFecha()
 {
-	QModelIndex index = listImages->currentIndex();
-	if (Path::image_idx >= 0 && index.column()==1) 
-		model->setData(index, datetime->dateTime().toString("yyyy-MM-dd-hh:mm"), Qt::EditRole);
+  QModelIndex index = listImages->currentIndex();
+  if (Path::image_idx >= 0 && index.column()==1) 
+    model->setData(index, datetime->dateTime().toString("yyyy-MM-dd-hh:mm"), Qt::EditRole);
 }
 
 
 bool Window::asignaFecha(const QModelIndex &index) {
-	if (index.column() > 0) {
-		model->setData(index, datetime->dateTime().toString("yyyy-MM-dd-hh:mm"));
-		return true;
-	}
-	return false;
+  if (index.column() > 0) {
+    model->setData(index, datetime->dateTime().toString("yyyy-MM-dd-hh:mm"));
+    return true;
+  }
+  return false;
 }
 
 
@@ -618,7 +616,6 @@ void Window::addPath()
 	escena->addPath(path);
 	list << path->getName();
 	pathmodel->setStringList(list);
-	printf("addpath %d [%d]\n", id, pathmodel->stringList().size());
 }
 
 
@@ -648,17 +645,25 @@ void Window::removePath()
 }
 
 
-void Window::pathColor()
+void Window::setSelectedColor()
 {
-	QColor color = QColorDialog::getColor(Path::defaultColor);
-	if (Path::selected!=NULL)
-	  Path::selected->pen.setColor(color);
-	else
-		Path::defaultColor = color;
+  QColor color = QColorDialog::getColor(Path::defaultColor);
+  if (Path::selected!=NULL)
+    Path::selected->pen.setColor(color);
+  else
+    Path::defaultColor = color;
 		
-	QPixmap pathcolorpixmap(32,32);
-	pathcolorpixmap.fill(Path::defaultColor);
-	pathColorAction->setIcon(QIcon(pathcolorpixmap));
+  QPixmap pathcolorpixmap(32,32);
+  pathcolorpixmap.fill(Path::defaultColor);
+  pathColorAction->setIcon(QIcon(pathcolorpixmap));
+  
+  if (!escena->selectedItems().empty()) {
+    QGraphicsSimpleTextItem *item = (QGraphicsSimpleTextItem*)escena->selectedItems()[0];
+    if (item->parentItem() == 0) {
+      item->setBrush(QBrush(color));
+      // qDebug() << "Color text " << item->text() << " " << color << " vs " << item->brush().color() << endl;
+    }
+  }
 }
 
 
@@ -896,8 +901,12 @@ bool Window::guardaSesion()
   outStream << model->fullStringList();
 
   outStream << pathlist.size();
+
+  int i = 0;
   foreach (Path *path, pathlist) {
+    path->setName(pathmodel->stringList().at(i));
     outStream << path;
+    i++;
   }
   
   if (georeferente!=NULL) {
@@ -910,17 +919,13 @@ bool Window::guardaSesion()
     outStream << texts_list.size();
     qDebug() << "Text list " << texts_list.size() << endl;	  
     foreach (QGraphicsSimpleTextItem *text_item, texts_list) {
-      qDebug() << "Pos " << text_item->pos();
-      qDebug() << "Font " << text_item->font();
-      qDebug() << "Text " << text_item->text();
       outStream << text_item->pos();
       outStream << text_item->text();
       outStream << text_item->font();
+      outStream << text_item->brush().color();
     }
   } else 
     outStream << 0;
-	
-  printf("Guardo %d [%d]\n", pathlist.size(), pathmodel->stringList().size());
 	
   return true;
 }
@@ -938,7 +943,7 @@ bool Window::cargaSesionComo()
 
 bool Window::cargaSesion()
 {
-  qint32 magic, version;
+  quint32 magic, version;
   
   QFile file(filename);
   if (!file.open(QIODevice::ReadOnly))
@@ -992,19 +997,21 @@ bool Window::cargaSesion()
     for (int i=0; i < ntexts; i++) {
       QPointF pos;
       QString text;
-      QFont font;	      
+      QFont font;
+      QColor color;
       inStream >> pos;
       inStream >> text;
       inStream >> font;
+      inStream >> color;
       addText(pos, text, font);
+      
+      QAbstractGraphicsShapeItem *p = (QAbstractGraphicsShapeItem*)texts_list.last();
+      p->setBrush(QBrush(color));      
     }
-  }
-	
+  }	
   path_toolbar->setEnabled(true);
   selImage(0);
 	
-  printf("strings %d [%d]\n", list.size(), model->stringList().size());
-  printf("paths %d [%d]\n", pathlist.size(), pathmodel->stringList().size());
   return true;
 }
 
@@ -1032,7 +1039,6 @@ void Window::drawArrows()
 
   if (Path::selected != NULL) {
     Path::selected->show_arrow = show_arrows;
-      qDebug() << "Cambiando arrow " << endl;  
     } else      
       foreach (Path *path, pathlist) 
 	path->show_arrow = show_arrows;
@@ -1046,7 +1052,6 @@ void Window::drawHourIcons()
   
   if (Path::selected != NULL) {
     Path::selected->show_icon = show_icons;
-    qDebug() << "Cambiando icons " << endl;  
   } else      
     foreach (Path *path, pathlist) 
       path->show_icon = show_icons;
@@ -1147,3 +1152,4 @@ void Window::updateview() {
     QWidget * viewport = view->viewport();
     viewport->update();	
 }
+

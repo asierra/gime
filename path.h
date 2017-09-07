@@ -14,6 +14,9 @@
 #ifndef PATH_H
 #define PATH_H
 
+#define GIME_MAGIC 0xCCA0ABDC
+#define GIME_DATA_VERSION 4
+
 #include <QPolygon>
 #include <QPen>
 #include "tablemodel.h"

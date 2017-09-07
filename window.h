@@ -14,9 +14,6 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
-#define GIME_MAGIC 0xCCA0ABDC
-#define GIME_DATA_VERSION 3
-
 
 #include <QSplitter>
 #include <QListView>
@@ -89,7 +86,7 @@ class Window : public QSplitter {
     void labelManualFormat();
     void drawArrows();
     void drawHourIcons();
-    void pathColor();
+    void setSelectedColor();
     void agregaTexto();
     void agregaGriego();
     bool asignaFecha(const QModelIndex &index);
