@@ -82,3 +82,12 @@ modificados igual que el color y ancho y se salvan a disco pues no son
 propiedades de la pluma. La bolita no se quita en animaciones
 (APNG). Hay un menú explícito para escribir en griego.
 
+
+Thu Nov  2 08:53:30 CST 2017
+
+Muy importante mostrar la versión actual del programa, para lo cual se
+agregó una constante global GIME_NAME_VERSION con el nombre del
+programa y su versión numérica. El segundo número es la versión del
+formato de datos.
+
+

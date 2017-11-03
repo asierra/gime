@@ -502,7 +502,7 @@ void Window::borraListaImagenes()
 
 void Window::acerca()
 {
-  QMessageBox::about(this, trUtf8("GIME"),
+  QMessageBox::about(this, trUtf8(GIME_NAME_VERSION),
 		     trUtf8("Sistema de rastreo de tormentas y análisis\nde imágenes meteorológicas.\nAutor: Alejandro Aguilar Sierra\nCentro de Ciencias de la Atmósfera, UNAM"));
 }
 

@@ -16,6 +16,7 @@
 
 #define GIME_MAGIC 0xCCA0ABDC
 #define GIME_DATA_VERSION 4
+extern const char* GIME_NAME_VERSION;
 
 #include <QPolygon>
 #include <QPen>
