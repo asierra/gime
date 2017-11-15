@@ -49,7 +49,7 @@ class Window : public QSplitter {
   void keyPressEvent(QKeyEvent *event);
 		    
   public slots:
-    void cargaImagen();	
+    void cargaImagenes();	
     void borraListaImagenes();
     void acerca();
     void help();
@@ -100,7 +100,7 @@ class Window : public QSplitter {
     QMenu *windowMenu;
     QMenu *helpMenu;
     QMenu *editMenu;
-    TableModel *model;
+    TableModel *imagemodel;
     QStringListModel *pathmodel;
     QToolBar *path_toolbar;
     QAction *loadAction;

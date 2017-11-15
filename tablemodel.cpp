@@ -237,7 +237,7 @@ QString	TableModel::dateSuggestedFormat(int space) const
 		if (umin)
 			format += "mm";
 	}
-	printf("Space %d Format %s\n", space, format.toStdString().c_str()); fflush(stdout);
+
 	return format;
 }
 

@@ -54,7 +54,7 @@ Window::Window()
   createWorkarea();
   setStretchFactor(0, 1);
   setStretchFactor(1, 0);
-  model = NULL;
+  imagemodel = NULL;
   pathmodel = NULL;
   nuevaSesion();
   QFontDatabase::addApplicationFont(":fonts/WeatherFont.ttf");
@@ -66,7 +66,7 @@ Window::Window()
 Window::~Window()
 {	
   qDeleteAll(pathlist);
-  delete model;
+  delete imagemodel;
   delete pathmodel;
 }
 
@@ -74,15 +74,15 @@ Window::~Window()
 bool Window::nuevaSesion()
 {  
   setWindowTitle(tr("GIME"));
-  if (model!=NULL)
-    delete model;
-  if (pathmodel!=NULL)
+  if (imagemodel != NULL)
+    delete imagemodel;
+  if (pathmodel != NULL)
     delete pathmodel;
-  model = new TableModel(this);	
-  Path::model = model;
+  imagemodel = new TableModel(this);	
+  Path::model = imagemodel;
   pathmodel = new QStringListModel(this);
   listPaths->setModel(pathmodel);
-  listImages->setModel(model);
+  listImages->setModel(imagemodel);
   connect(listImages->selectionModel(), SIGNAL(currentChanged(QModelIndex,
 							      QModelIndex)),
 	  this, SLOT(imageSelected(const QModelIndex&)));	
@@ -110,10 +110,10 @@ bool Window::extractDatesFromNames()
   int k;
   bool ok;
 	
-  if (model->stringList().size()==0)
+  if (imagemodel->stringList().size()==0)
     return false;
 		
-  QStringList list = model->stringList();
+  QStringList list =imagemodel->stringList();
 		
   QFileInfo pathInfo(list.at(0));
   QString filenamei( pathInfo.fileName() );
@@ -203,7 +203,7 @@ bool Window::extractDatesFromNames()
       return false; 
     }
   }
-  model->setDatesList(fechas);
+  imagemodel->setDatesList(fechas);
   return true;
 }
 
@@ -223,7 +223,7 @@ QWidget *Window::createMenubar(QWidget * window)
   
   loadAction = new QAction(QIcon(":/icons/document-open.png"), tr("&Carga imagen(es)"), this);	
   fileMenu->addAction(loadAction);
-  connect(loadAction, SIGNAL(triggered()), this, SLOT(cargaImagen()));
+  connect(loadAction, SIGNAL(triggered()), this, SLOT(cargaImagenes()));
 	
   fileMenu->addSeparator();
 	
@@ -363,6 +363,9 @@ QWidget * Window::createWorkarea()
   listImages->setTextElideMode(Qt::ElideLeft);  
   listImages->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);	
 	
+    listImages->setSortingEnabled(true);
+    listImages->sortByColumn(1, Qt::AscendingOrder);
+    
   QSplitter *dateSplitter = new QSplitter(this);
   datetime = new QDateTimeEdit(QDateTime::currentDateTime(), this);
   datetime->setDisplayFormat("yyyy-MM-dd-hh:mm");
@@ -468,18 +471,17 @@ QWidget * Window::createWorkarea()
  }
 
 
-void Window::cargaImagen()
+void Window::cargaImagenes()
 {
 	QFileDialog dialog(this);
 	dialog.setFileMode(QFileDialog::ExistingFiles);
 	dialog.setNameFilter(tr("Images (*.png *.jpg *.tif *gif)")); 
 	if (dialog.exec()) {
-		QStringList fileNames;
-		fileNames = dialog.selectedFiles();
-		QStringList list = model->stringList();
+		QStringList fileNames = dialog.selectedFiles();
+		QStringList list = imagemodel->stringList();
 		int idx = list.size();
 		list << fileNames;
-		model->setStringList(list);
+		imagemodel->setStringList(list);
 		path_toolbar->setEnabled(true);
 		selImage(idx);
 	}
@@ -488,7 +490,7 @@ void Window::cargaImagen()
 		
 void Window::borraListaImagenes()
 {
-	if (model->rowCount() > 0) {
+	if (imagemodel->rowCount() > 0) {
 		QMessageBox msgBox;
 		msgBox.setText(QObject::trUtf8("¿Desea eliminar la sesión?"));
 		msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
@@ -535,8 +537,8 @@ void Window::imageSelected(const QModelIndex &index) {
   int i = index.row();
   Path::image_idx = i;
   escena->updatePositions();
-  view->setImage(model->stringList().at(i));	
-  datetime->setDateTime(model->dateTimeAt(i));
+  view->setImage(imagemodel->stringList().at(i));	
+  datetime->setDateTime(imagemodel->dateTimeAt(i));
 }
 
 
@@ -544,13 +546,13 @@ void Window::cambiaFecha()
 {
   QModelIndex index = listImages->currentIndex();
   if (Path::image_idx >= 0 && index.column()==1) 
-    model->setData(index, datetime->dateTime().toString("yyyy-MM-dd-hh:mm"), Qt::EditRole);
+    imagemodel->setData(index, datetime->dateTime().toString("yyyy-MM-dd-hh:mm"), Qt::EditRole);
 }
 
 
 bool Window::asignaFecha(const QModelIndex &index) {
   if (index.column() > 0) {
-    model->setData(index, datetime->dateTime().toString("yyyy-MM-dd-hh:mm"));
+    imagemodel->setData(index, datetime->dateTime().toString("yyyy-MM-dd-hh:mm"));
     return true;
   }
   return false;
@@ -571,8 +573,8 @@ void Window::pathClicked(const QModelIndex &index) {
 
 void Window::selImage(int i)
 {
-	if (i >= 0 && i < model->rowCount()) {
-		QModelIndex index = model->index(i, 0);
+	if (i >= 0 && i < imagemodel->rowCount()) {
+		QModelIndex index = imagemodel->index(i, 0);
 		listImages->setCurrentIndex(index);
 		imageSelected(index);
 	}
@@ -602,7 +604,7 @@ void Window::imageNext()
 
 void Window::imageLast()
 {
-	selImage(model->rowCount()-1);
+	selImage(imagemodel->rowCount()-1);
 }
 
 
@@ -610,7 +612,7 @@ void Window::addPath()
 {
 	QStringList list = pathmodel->stringList();
 	int id = list.size();
-	Path *path = new Path(model->stringList().size());
+	Path *path = new Path(imagemodel->stringList().size());
 	path->setName(QString("%1").arg(id+1,3,10,QChar('0')));
 	pathlist << path;
 	escena->addPath(path);
@@ -681,7 +683,7 @@ void Window::drawLabels()
 {
   if (drawLabelsAction->isChecked()) {
     if (Labels::texts.isEmpty()) {
-      Labels::texts = model->dateStringList(model->dateSuggestedFormat(Labels::space));
+      Labels::texts = imagemodel->dateStringList(imagemodel->dateSuggestedFormat(Labels::space));
       if (Labels::shown.isEmpty()) {
 	for (int i=0; i < Labels::texts.size(); i++)
 	  Labels::shown.append(true);
@@ -735,14 +737,14 @@ void Window::labelManualFormat()
 
   if (format == "dd") {
     format = "d";
-    int count = model->imagesPerDay();
+    int count = imagemodel->imagesPerDay();
     spinLabels->setSingleStep(count);
     spinLabels->setValue(0);
     qDebug() <<  "Images per day " << count << endl;
   } else 
     spinLabels->setSingleStep(1);
   
-  Labels::texts = model->dateStringList(format);
+  Labels::texts = imagemodel->dateStringList(format);
   escena->updateTextLabels();
   updateview();  
 }
@@ -826,7 +828,7 @@ bool Window::exportAsAPNG()
         QString filename = QFileDialog::getSaveFileName(0, tr("Exportar a APNG"),
         "", tr("APNG files (*.apng)"));
         
-        exportToAPNG(filename, model->stringList(), escena);
+        exportToAPNG(filename, imagemodel->stringList(), escena);
         return true;
 }
 
@@ -898,7 +900,7 @@ bool Window::guardaSesion()
   outStream << (quint32)GIME_DATA_VERSION;
   outStream.setVersion(QDataStream::Qt_4_7);
 
-  outStream << model->fullStringList();
+  outStream << imagemodel->fullStringList();
 
   outStream << pathlist.size();
 
@@ -967,7 +969,7 @@ bool Window::cargaSesion()
 
   QStringList list;
   inStream >> list;
-  model->setFullStringList(list);
+  imagemodel->setFullStringList(list);
 	
   int psize;
   inStream >> psize;
