@@ -81,6 +81,27 @@ void TableModel::setDatesList ( const QStringList & strings )
 	}
 }
 
+void TableModel::sort() 
+{
+  QStringList names_aux = listNames;
+  QList<QDateTime> dates_sorted = listDates;
+
+  qSort(dates_sorted.begin(), dates_sorted.end());
+
+  for (int i=0; i < dates_sorted.size(); i++) {
+    int i2 = listDates.indexOf(dates_sorted.at(i));
+    listNames.replace(i, names_aux.at(i2));
+    //    qDebug() << "Cambiando " << i << " , " << i2 << endl;  
+    
+  }
+  listDates = dates_sorted;
+  QModelIndex index1 = index(0, 1);
+  QModelIndex index2 = index(rowCount()-1, 1);
+  emit(dataChanged(index1, index2));
+  //  qDebug() << listNames << endl;
+}
+
+
 int TableModel::rowCount(const QModelIndex &parent) const
  {
      Q_UNUSED(parent);

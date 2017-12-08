@@ -69,6 +69,7 @@ class Window : public QSplitter {
     void cambiaLetra();
     void cambiaAnchoLinea();
     void cambiaEstiloLinea();
+    void ordena();
     
     void cambiaFecha();
     void imageSelected(const QModelIndex &index);

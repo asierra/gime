@@ -204,6 +204,8 @@ bool Window::extractDatesFromNames()
     }
   }
   imagemodel->setDatesList(fechas);
+  imagemodel->sort();
+  
   return true;
 }
 
@@ -296,6 +298,10 @@ QWidget *Window::createMenubar(QWidget * window)
   newAction = new QAction(QObject::trUtf8("Cambia &estilo de línea"), this);	
   editMenu->addAction(newAction);
   connect(newAction, SIGNAL(triggered()), this, SLOT(cambiaEstiloLinea()));
+  
+  newAction = new QAction(QObject::trUtf8("&Ordena"), this);	
+  editMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(ordena()));
 
   // Text menu
   newAction = new QAction(QObject::trUtf8("Activa &etiquetas"), this);	
@@ -363,8 +369,8 @@ QWidget * Window::createWorkarea()
   listImages->setTextElideMode(Qt::ElideLeft);  
   listImages->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);	
 	
-    listImages->setSortingEnabled(true);
-    listImages->sortByColumn(1, Qt::AscendingOrder);
+  //    listImages->setSortingEnabled(true);
+  //    listImages->sortByColumn(1, Qt::AscendingOrder);
     
   QSplitter *dateSplitter = new QSplitter(this);
   datetime = new QDateTimeEdit(QDateTime::currentDateTime(), this);
@@ -1130,6 +1136,12 @@ void Window::cambiaEstiloLinea()
       path->width = i;*/
     updateview();	
   }
+}
+
+
+void Window::ordena()
+{
+  imagemodel->sort();
 }
 
 

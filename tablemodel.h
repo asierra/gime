@@ -53,6 +53,8 @@ class TableModel : public QAbstractTableModel
 	
   //     QList< QPair<QString, QString> > getList();
 
+  void sort();
+  
  private:
   QStringList listNames;
   QList<QDateTime> listDates;
