@@ -23,7 +23,7 @@ int Path::image_idx = 0;
 Path* Path::selected = NULL;
 QColor Path::defaultColor=Qt::darkBlue;
 TableModel *Path::model = NULL;
-const char* GIME_NAME_VERSION="GIME 2.4.1";
+const char* GIME_NAME_VERSION="GIME 2.4.2";
 
 
 Path::Path(int size): QPolygon(size)

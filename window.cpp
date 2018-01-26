@@ -1,3 +1,4 @@
+
 /*
  * This file is part of GIME, a System to track storms interactively
  * and to do basic meteorological image processing.
@@ -204,7 +205,7 @@ bool Window::extractDatesFromNames()
     }
   }
   imagemodel->setDatesList(fechas);
-  imagemodel->sort();
+  imagemodel->sort_by_date();
   
   return true;
 }
@@ -299,9 +300,13 @@ QWidget *Window::createMenubar(QWidget * window)
   editMenu->addAction(newAction);
   connect(newAction, SIGNAL(triggered()), this, SLOT(cambiaEstiloLinea()));
   
-  newAction = new QAction(QObject::trUtf8("&Ordena"), this);	
+  newAction = new QAction(QObject::trUtf8("&Ordena por fecha"), this);	
   editMenu->addAction(newAction);
-  connect(newAction, SIGNAL(triggered()), this, SLOT(ordena()));
+  connect(newAction, SIGNAL(triggered()), this, SLOT(sort_by_date()));
+  
+  newAction = new QAction(QObject::trUtf8("Ordena por &nombre"), this);	
+  editMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(sort_by_name()));
 
   // Text menu
   newAction = new QAction(QObject::trUtf8("Activa &etiquetas"), this);	
@@ -1139,9 +1144,15 @@ void Window::cambiaEstiloLinea()
 }
 
 
-void Window::ordena()
+void Window::sort_by_date()
 {
-  imagemodel->sort();
+  imagemodel->sort_by_date();
+}
+
+
+void Window::sort_by_name()
+{
+  imagemodel->sort_by_name();
 }
 
 
