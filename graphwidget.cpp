@@ -22,7 +22,7 @@
 
 #include <math.h>
 #include <string>
-using namespace std;
+//using namespace std;
 
 
 GraphWidget::GraphWidget(Window *parent)
@@ -49,15 +49,18 @@ void GraphWidget::clear()
 }
 
 
-void GraphWidget::setImage(QString filename)
+bool GraphWidget::setImage(QString filename)
 {
-	fondo.load(filename);
-   	scene()->setSceneRect(0, 0, fondo.width(), fondo.height());
-	QStringList slist = fondo.textKeys();
-//	printf("Cagando imagen %s %d\n", filename.toStdString().c_str(), slist.size());
-	setWindowTitle(filename);
-	resetCachedContent();
-	scene()->update();
+  if (fondo.load(filename)) {
+    qDebug() << "Leyendo imagen " << filename << endl;
+    scene()->setSceneRect(0, 0, fondo.width(), fondo.height());
+    QStringList slist = fondo.textKeys();
+    setWindowTitle(filename);
+    resetCachedContent();
+    scene()->update();
+    return true;
+  }
+  return false;
 }
 
 

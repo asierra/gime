@@ -23,13 +23,13 @@ class GraphWidget : public QGraphicsView
 {
     Q_OBJECT
 
-public:
+ public:
     GraphWidget(Window *parent = 0);
-	void setImage(QString);
-	void selectPath();
-	QImage fondo;
-
-public slots:
+    bool setImage(QString);
+    void selectPath();
+    QImage fondo;
+    
+ public slots:
     void clear();
     void zoomIn();
     void zoomOut();

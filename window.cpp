@@ -1,4 +1,3 @@
-
 /*
  * This file is part of GIME, a System to track storms interactively
  * and to do basic meteorological image processing.
@@ -386,7 +385,7 @@ QWidget * Window::createWorkarea()
   connect(button, SIGNAL(pressed()), this, SLOT(cambiaFecha()));
   dateSplitter->addWidget(button);
 	
-  imaSplitter->addWidget(new QLabel("Imagenes", this));
+  imaSplitter->addWidget(new QLabel(QString::fromUtf8("Imágenes"), this));
   imaSplitter->addWidget(toolbar);
   imaSplitter->addWidget(listImages);
   imaSplitter->addWidget(dateSplitter);
@@ -548,8 +547,14 @@ void Window::imageSelected(const QModelIndex &index) {
   int i = index.row();
   Path::image_idx = i;
   escena->updatePositions();
-  view->setImage(imagemodel->stringList().at(i));	
-  datetime->setDateTime(imagemodel->dateTimeAt(i));
+  if (view->setImage(imagemodel->stringList().at(i)))
+    datetime->setDateTime(imagemodel->dateTimeAt(i));
+  else if (QMessageBox::question(this, tr("Imagen no encontrada"),
+				 QObject::trUtf8("¿Desea usar misma ruta que la sesión?"),
+				 QMessageBox::Yes | QMessageBox::No)) {
+    qDebug() << "Leyendo imagenes path ruta " << filename << endl;
+    imagemodel->changeFilePath(QFileInfo(filename).canonicalPath());
+  }
 }
 
 
@@ -949,7 +954,6 @@ bool Window::cargaSesionComo()
   filename = QFileDialog::getOpenFileName(this,
      QObject::trUtf8("Carga sesión"), "sesion.gime", tr("GIME Sessions (*.gime)"));
 	
-  setWindowTitle(tr("GIME - ")+filename);
   return cargaSesion();;
 }
 
@@ -962,6 +966,8 @@ bool Window::cargaSesion()
   if (!file.open(QIODevice::ReadOnly))
     return false;
 
+  setWindowTitle(tr("GIME - ")+filename);
+  
   QDataStream inStream(&file);
 
   inStream >> magic;
@@ -1040,6 +1046,18 @@ void Window::keyPressEvent(QKeyEvent *event)
     break;
   case Qt::Key_End:
     imageLast();
+    break;
+  case Qt::Key_Delete:
+    if (QMessageBox::question(this, tr("Eliminar Imagen"),
+			      QObject::trUtf8("¿Desea eliminar la imagen de la lista?"),
+			      QMessageBox::Yes | QMessageBox::No)) {
+      
+      QModelIndex index = listImages->currentIndex();
+      int i = index.row();      
+      qDebug() << "Eliminando " << i << endl;
+      imagemodel->removeRows(i,1);
+    }
+    break;
   default:
     QSplitter::keyPressEvent(event);
   }

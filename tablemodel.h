@@ -35,7 +35,8 @@ class TableModel : public QAbstractTableModel
   void setStringList ( const QStringList & strings );
   void setFullStringList ( const QStringList & strings );
   void setDatesList ( const QStringList & dates );
-	
+  void changeFilePath(QString filepath);
+  
   int rowCount(const QModelIndex &parent = QModelIndex()) const;
   int columnCount(const QModelIndex &parent) const;
   QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;

@@ -40,7 +40,8 @@ class Window : public QSplitter {
   Window();
   ~Window();
   void selImage(int i);
-		
+  void setFileName(QString fn) {  filename = fn; }
+  
  protected:
   GraphWidget *view;
   GimeScene *escena;

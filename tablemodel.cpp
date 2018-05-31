@@ -13,6 +13,7 @@
 
 #include "tablemodel.h"
 #include <QDebug>
+#include <QDir>
 #include <QFileInfo>
 
 TableModel::TableModel(QObject *parent)
@@ -80,6 +81,17 @@ void TableModel::setDatesList ( const QStringList & strings )
 		emit(dataChanged(index1, index2));
 	}
 }
+
+void TableModel::changeFilePath(QString filePath)
+{
+  for (int i=0; i < listNames.size(); i++) {
+    QString fileName = QFileInfo(listNames.at(i)).fileName();
+    QString path = QDir(filePath).filePath(fileName);
+    qDebug() << listNames.at(i) << " -> " << path << endl;
+    listNames.replace(i, path);
+  }
+}
+
 
 void TableModel::sort_by_date() 
 {

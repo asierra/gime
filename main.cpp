@@ -11,7 +11,8 @@
  * Centro de Ciencias de la Atmosfera, UNAM         
  */
 
-#include <QApplication> 
+#include <QApplication>
+#include <QDebug> 
 #include "window.h"
 
 
@@ -23,6 +24,12 @@ int main(int argc, char *argv[])
 
 	Window window;
 
+	if (argc > 1) {
+	  window.setFileName(argv[1]);
+	  window.cargaSesion();
+	  qDebug() << "Argv " << argv[1]; // << std::endl;
+	}
+	
 	window.show();
 
 	return app.exec();
