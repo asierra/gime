@@ -10,7 +10,8 @@
 
 
 int exportToAPNG(QString filename, QStringList list, GimeScene *escena)
-{
+{  
+#ifdef PNG_APNG_SUPPORTED 
   png_structp png_ptr_write;
   png_infop info_ptr_write;
   png_bytepp rowPointers;
@@ -83,7 +84,8 @@ int exportToAPNG(QString filename, QStringList list, GimeScene *escena)
   png_destroy_write_struct(&png_ptr_write, &info_ptr_write);
   fclose(file);
 
-  printf("all done\n");
-
   return 0;
+#else
+  return -1;
+#endif
 }

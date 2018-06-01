@@ -841,11 +841,14 @@ bool Window::renderToPNG()
 
 bool Window::exportAsAPNG()
 {
-        QString filename = QFileDialog::getSaveFileName(0, tr("Exportar a APNG"),
-        "", tr("APNG files (*.apng)"));
-        
-        exportToAPNG(filename, imagemodel->stringList(), escena);
-        return true;
+  QString filename = QFileDialog::getSaveFileName(0, tr("Exportar a APNG"),
+						  "", tr("APNG files (*.apng)"));
+  if (exportToAPNG(filename, imagemodel->stringList(), escena)==0) 
+    return true;
+  else
+    QMessageBox::warning(this, "Error", "Error o APNG no soportado.");
+  
+  return false;
 }
 
 
