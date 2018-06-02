@@ -24,6 +24,7 @@
 #include "graphwidget.h"
 #include "textdialog.h"
 #include "coordtab.h"
+#include "characterwidget.h"
 
 
 static QFont text_font;
@@ -35,12 +36,13 @@ extern Georefencia *georeferente;
 QList<QGraphicsSimpleTextItem*> texts_list;
 
 
-void Window::addText(QPointF &pos, QString &text, QFont &font)
+void Window::addText(QPointF &pos, const QString &text, QFont &font)
 {
   if (!text.isEmpty()) {
     QGraphicsSimpleTextItem *item = new QGraphicsSimpleTextItem();
     item->setFlag(QGraphicsItem::ItemIsSelectable);
     item->setFlag(QGraphicsItem::ItemIsMovable);
+    item->setFlag(QGraphicsItem::ItemSendsGeometryChanges);
     item->setText(text);
     item->setPos(pos);
     item->setFont(font);
@@ -320,6 +322,10 @@ QWidget *Window::createMenubar(QWidget * window)
   textMenu->addAction(newAction);
   connect(newAction, SIGNAL(triggered()), this, SLOT(agregaGriego()));
 
+  newAction = new QAction(QObject::trUtf8("Agrega &símbolo"), this);	
+  textMenu->addAction(newAction);
+  connect(newAction, SIGNAL(triggered()), this, SLOT(addSymbol()));
+  
   // Help menu
   newAction = new QAction(QObject::trUtf8("A&yuda"), this);	
   helpMenu->addAction(newAction);
@@ -485,7 +491,7 @@ void Window::cargaImagenes()
 {
 	QFileDialog dialog(this);
 	dialog.setFileMode(QFileDialog::ExistingFiles);
-	dialog.setNameFilter(tr("Images (*.png *.jpg *.tif *gif)")); 
+	dialog.setNameFilter(tr("Images (*.png *.jpg *.tif *.gif)")); 
 	if (dialog.exec()) {
 		QStringList fileNames = dialog.selectedFiles();
 		QStringList list = imagemodel->stringList();
@@ -1179,9 +1185,30 @@ void Window::sort_by_name()
 
 void Window::agregaGriego() {
   text_font.setFamily("Standard Symbols L");
-  agregaTexto();
+  CharacterWidget * characterWidget = new CharacterWidget;  
+  characterWidget->updateFont(text_font);
+  connect(characterWidget, SIGNAL(characterSelected(QString)),
+          this, SLOT(insertCharacter(QString)));
+  characterWidget->show();
+  //  agregaTexto();
 }
 
+
+void Window::addSymbol() {
+  text_font.setFamily("Weather");
+  CharacterWidget * characterWidget = new CharacterWidget;  
+  characterWidget->updateFont(text_font);
+  connect(characterWidget, SIGNAL(characterSelected(QString)),
+          this, SLOT(insertCharacter(QString)));
+  characterWidget->show();
+}
+
+
+void Window::insertCharacter(const QString &character) {
+  QPointF p(0,0);
+  //  qDebug() << "Char " << character << endl;
+  addText(p, character, text_font);
+}
 
 void Window::agregaTexto() {
   bool ok;

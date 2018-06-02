@@ -92,13 +92,15 @@ class Window : public QSplitter {
     void setSelectedColor();
     void agregaTexto();
     void agregaGriego();
+    void addSymbol();
     bool asignaFecha(const QModelIndex &index);
+    void insertCharacter(const QString &character);
 	
  private:
     void updateview();
     QWidget *createWorkarea();
     QWidget *createMenubar(QWidget * window);
-    void addText(QPointF &pos, QString &text, QFont &font);
+    void addText(QPointF &pos, const QString &text, QFont &font);
     QMenu *fileMenu;
     QMenu *windowMenu;
     QMenu *helpMenu;
