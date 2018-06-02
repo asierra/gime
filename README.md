@@ -1,20 +1,22 @@
 # gime
 
- * This file is part of GIME, a System to track storms interactively
- * and to do basic meteorological image processing.
- *
- * GIME is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * Copyright (c) 2002-2018  Alejandro Aguilar Sierra (asierra@unam.mx)
- * Centro de Ciencias de la Atmosfera, UNAM 
+This file is part of GIME, a System to track storms interactively
+and to do basic meteorological image processing.
+ 
+GIME is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+(at your option) any later version.
+ 
+Copyright (c) 2002-2018  Alejandro Aguilar Sierra (asierra@unam.mx)
+Centro de Ciencias de la Atmosfera, UNAM 
 
 Sistema interactivo de rastreo de tormentas y análisis de imágenes
 meteorológicas.
 
-GIME es un programa para analizar y rastrear tormentas en secuencias de imágenes o mapas meteorológicos. Funciona con el siguiente procedimiento:
+GIME es un programa para analizar y rastrear tormentas en secuencias
+de imágenes o mapas meteorológicos. Funciona con el siguiente
+procedimiento:
 
 1. Si la sesión es nueva, cargue una secuencia de imágenes. De lo
   contrario, cargue una sesión previa.
@@ -39,7 +41,11 @@ GIME es un programa para analizar y rastrear tormentas en secuencias de imágene
   fechadas. Si se desea poner o quitar fecha en la posición
   correspondiente a la imagen actual, oprimir la letra F.
 
+El requisito es contar con las bibliotecas Qt 4.8 y opcionalmente con
+libpng parchado para soportar APNG. Para compilar, ejecutar el comando
+make. Si el Makefile no es apropiado a su plataforma, ejecutar el
+comando qmake.
+
 Autor: Alejandro Aguilar Sierra (asierra@unam.mx)
 Centro de Ciencias de la Atmósfera, UNAM
-
 
